@@ -240,7 +240,8 @@ class InitializerAnalyzer
                 continue;
             }
 
-            $ref = $this->resolveClassConstFetch($item->value);
+            $ref = $this->resolveClassConstFetch($item->value)
+                ?? $this->resolveStaticCall($item->value);
 
             if ($ref !== null) {
                 $refs[] = $ref;
@@ -342,6 +343,20 @@ class InitializerAnalyzer
         if ($expr instanceof Expr\ClassConstFetch
             && $expr->name instanceof Node\Identifier
             && $expr->name->name === 'class'
+            && $expr->class instanceof Node\Name
+        ) {
+            return $expr->class->toString();
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a Foo::instance() or Foo::create() expression to a FQCN string.
+     */
+    protected function resolveStaticCall(Node\Expr $expr): ?string
+    {
+        if ($expr instanceof Expr\StaticCall
             && $expr->class instanceof Node\Name
         ) {
             return $expr->class->toString();

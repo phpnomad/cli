@@ -32,8 +32,7 @@ if (!$autoloadFound) {
 }
 
 use PHPNomad\Cli\Application;
-use PHPNomad\Cli\Strategies\ConsoleStrategy;
-use PHPNomad\Console\Interfaces\OutputStrategy;
+use PHPNomad\Symfony\Component\Console\Strategies\ConsoleStrategy;
 
 $app = new Application();
 $app->boot();
@@ -42,9 +41,4 @@ $container = $app->getContainer();
 
 /** @var ConsoleStrategy $consoleStrategy */
 $consoleStrategy = $container->get(ConsoleStrategy::class);
-
-/** @var OutputStrategy $output */
-$output = $container->get(OutputStrategy::class);
-
-$exitCode = $consoleStrategy->dispatch($argv, $output);
-exit($exitCode);
+$consoleStrategy->run();

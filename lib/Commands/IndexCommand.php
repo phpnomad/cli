@@ -41,7 +41,8 @@ class IndexCommand implements Command
         $this->output->success("Index written to $dir/");
         $this->output->writeln('  meta.json, classes.jsonl, initializers.jsonl, applications.jsonl,');
         $this->output->writeln('  controllers.jsonl, commands.jsonl, dependencies.jsonl,');
-        $this->output->writeln('  tables.jsonl, events.jsonl, graphql-types.jsonl');
+        $this->output->writeln('  tables.jsonl, events.jsonl, graphql-types.jsonl,');
+        $this->output->writeln('  facades.jsonl, task-handlers.jsonl, mutations.jsonl');
 
         $this->output->newline();
         $this->output->info('Summary');
@@ -54,6 +55,9 @@ class IndexCommand implements Command
         $this->output->writeln('  Events:         ' . count($index->resolvedEvents));
         $this->output->writeln('  Listeners:      ' . $index->getTotalListeners());
         $this->output->writeln('  GraphQL types:  ' . count($index->resolvedGraphQLTypes));
+        $this->output->writeln('  Facades:        ' . count($index->resolvedFacades));
+        $this->output->writeln('  Task handlers:  ' . count($index->resolvedTaskHandlers));
+        $this->output->writeln('  Mutations:      ' . count($index->resolvedMutations));
         $this->output->writeln('  Dependencies:   ' . count($index->dependencyTrees));
         $this->output->writeln('  Classes:        ' . count($index->classes));
 

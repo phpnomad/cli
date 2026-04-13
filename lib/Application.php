@@ -16,24 +16,33 @@ use PHPNomad\Cli\Indexer\Adapters\InitializerReferenceAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedCommandAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedControllerAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedEventAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedFacadeAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedGraphQLTypeAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedMutationAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedTableAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedTaskHandlerAdapter;
 use PHPNomad\Cli\Indexer\BootSequenceWalker;
 use PHPNomad\Cli\Indexer\ClassIndex;
 use PHPNomad\Cli\Indexer\CommandAnalyzer;
 use PHPNomad\Cli\Indexer\ControllerAnalyzer;
 use PHPNomad\Cli\Indexer\DependencyResolver;
 use PHPNomad\Cli\Indexer\EventAnalyzer;
+use PHPNomad\Cli\Indexer\FacadeAnalyzer;
 use PHPNomad\Cli\Indexer\GraphQLTypeAnalyzer;
 use PHPNomad\Cli\Indexer\InitializerAnalyzer;
+use PHPNomad\Cli\Indexer\MutationAnalyzer;
 use PHPNomad\Cli\Indexer\TableAnalyzer;
+use PHPNomad\Cli\Indexer\TaskHandlerAnalyzer;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
-use PHPNomad\Cli\Strategies\ConsoleStrategy;
+use PHPNomad\Cli\Strategies\ConsoleLogger;
 use PHPNomad\Console\Interfaces\ConsoleStrategy as ConsoleStrategyInterface;
 use PHPNomad\Console\Interfaces\OutputStrategy;
 use PHPNomad\Di\Container\Container;
 use PHPNomad\Di\Interfaces\InstanceProvider as InstanceProviderInterface;
+use PHPNomad\Logger\Interfaces\LoggerStrategy;
 use PHPNomad\Symfony\Component\Console\Strategies\ConsoleOutputStrategy;
+use PHPNomad\Symfony\Component\Console\Strategies\ConsoleStrategy;
+use Symfony\Component\Console\Application as SymfonyApplication;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -70,8 +79,22 @@ class Application
         );
 
         $this->container->bindFactory(
+            LoggerStrategy::class,
+            fn() => new ConsoleLogger($this->container->get(OutputInterface::class))
+        );
+
+        $this->container->bindFactory(
+            SymfonyApplication::class,
+            fn() => new SymfonyApplication('PHPNomad CLI')
+        );
+
+        $this->container->bindFactory(
             ConsoleStrategy::class,
-            fn() => new ConsoleStrategy()
+            fn() => new ConsoleStrategy(
+                $this->container->get(LoggerStrategy::class),
+                $this->container->get(SymfonyApplication::class),
+                $this->container->get(OutputStrategy::class)
+            )
         );
 
         $this->container->bindFactory(
@@ -89,6 +112,9 @@ class Application
         $this->container->bindFactory(ResolvedTableAdapter::class, fn() => new ResolvedTableAdapter());
         $this->container->bindFactory(ResolvedEventAdapter::class, fn() => new ResolvedEventAdapter());
         $this->container->bindFactory(ResolvedGraphQLTypeAdapter::class, fn() => new ResolvedGraphQLTypeAdapter());
+        $this->container->bindFactory(ResolvedFacadeAdapter::class, fn() => new ResolvedFacadeAdapter());
+        $this->container->bindFactory(ResolvedTaskHandlerAdapter::class, fn() => new ResolvedTaskHandlerAdapter());
+        $this->container->bindFactory(ResolvedMutationAdapter::class, fn() => new ResolvedMutationAdapter());
 
         $this->container->bindFactory(
             IndexedClassAdapter::class,
@@ -122,6 +148,9 @@ class Application
         $this->container->bindFactory(TableAnalyzer::class, fn() => new TableAnalyzer());
         $this->container->bindFactory(EventAnalyzer::class, fn() => new EventAnalyzer());
         $this->container->bindFactory(GraphQLTypeAnalyzer::class, fn() => new GraphQLTypeAnalyzer());
+        $this->container->bindFactory(FacadeAnalyzer::class, fn() => new FacadeAnalyzer());
+        $this->container->bindFactory(TaskHandlerAnalyzer::class, fn() => new TaskHandlerAnalyzer());
+        $this->container->bindFactory(MutationAnalyzer::class, fn() => new MutationAnalyzer());
 
         $this->container->bindFactory(
             DependencyResolver::class,
@@ -140,6 +169,9 @@ class Application
                 $this->container->get(TableAnalyzer::class),
                 $this->container->get(EventAnalyzer::class),
                 $this->container->get(GraphQLTypeAnalyzer::class),
+                $this->container->get(FacadeAnalyzer::class),
+                $this->container->get(TaskHandlerAnalyzer::class),
+                $this->container->get(MutationAnalyzer::class),
                 $this->container->get(IndexedClassAdapter::class),
                 $this->container->get(IndexedInitializerAdapter::class),
                 $this->container->get(IndexedApplicationAdapter::class),
@@ -148,7 +180,10 @@ class Application
                 $this->container->get(DependencyNodeAdapter::class),
                 $this->container->get(ResolvedTableAdapter::class),
                 $this->container->get(ResolvedEventAdapter::class),
-                $this->container->get(ResolvedGraphQLTypeAdapter::class)
+                $this->container->get(ResolvedGraphQLTypeAdapter::class),
+                $this->container->get(ResolvedFacadeAdapter::class),
+                $this->container->get(ResolvedTaskHandlerAdapter::class),
+                $this->container->get(ResolvedMutationAdapter::class)
             )
         );
 

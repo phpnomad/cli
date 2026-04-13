@@ -9,8 +9,11 @@ use PHPNomad\Cli\Indexer\Adapters\IndexedInitializerAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedCommandAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedControllerAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedEventAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedFacadeAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedGraphQLTypeAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedMutationAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedTableAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedTaskHandlerAdapter;
 use PHPNomad\Cli\Indexer\Models\ProjectIndex;
 use PHPNomad\Console\Interfaces\OutputStrategy;
 
@@ -26,6 +29,9 @@ class ProjectIndexer
         protected TableAnalyzer $tableAnalyzer,
         protected EventAnalyzer $eventAnalyzer,
         protected GraphQLTypeAnalyzer $graphQLTypeAnalyzer,
+        protected FacadeAnalyzer $facadeAnalyzer,
+        protected TaskHandlerAnalyzer $taskHandlerAnalyzer,
+        protected MutationAnalyzer $mutationAnalyzer,
         protected IndexedClassAdapter $classAdapter,
         protected IndexedInitializerAdapter $initializerAdapter,
         protected IndexedApplicationAdapter $applicationAdapter,
@@ -34,7 +40,10 @@ class ProjectIndexer
         protected DependencyNodeAdapter $dependencyNodeAdapter,
         protected ResolvedTableAdapter $tableAdapter,
         protected ResolvedEventAdapter $eventAdapter,
-        protected ResolvedGraphQLTypeAdapter $graphQLTypeAdapter
+        protected ResolvedGraphQLTypeAdapter $graphQLTypeAdapter,
+        protected ResolvedFacadeAdapter $facadeAdapter,
+        protected ResolvedTaskHandlerAdapter $taskHandlerAdapter,
+        protected ResolvedMutationAdapter $mutationAdapter
     ) {
     }
 
@@ -186,6 +195,98 @@ class ProjectIndexer
             $output->info('Resolved ' . count($resolvedGraphQLTypes) . ' GraphQL types');
         }
 
+        // Resolve facades
+        $facadeFqcns = [];
+        foreach ($initializers as $init) {
+            foreach ($init->facades as $fqcn) {
+                $facadeFqcns[$fqcn] = true;
+            }
+        }
+
+        $resolvedFacades = [];
+        foreach ($facadeFqcns as $fqcn => $_) {
+            $class = $classes[$fqcn] ?? null;
+
+            if ($class === null) {
+                $class = $this->classIndex->resolveFromVendor($fqcn, $path);
+            }
+
+            if ($class !== null) {
+                $resolvedFacades[$fqcn] = $this->facadeAnalyzer->analyze($class, $path);
+            }
+        }
+
+        if (!empty($resolvedFacades)) {
+            $output->info('Resolved ' . count($resolvedFacades) . ' facades');
+        }
+
+        // Resolve task handlers
+        $resolvedTaskHandlers = [];
+        foreach ($initializers as $init) {
+            foreach ($init->taskHandlers as $taskClassFqcn => $handlerFqcns) {
+                foreach ($handlerFqcns as $handlerFqcn) {
+                    $handlerClass = $classes[$handlerFqcn] ?? null;
+
+                    if ($handlerClass === null) {
+                        $handlerClass = $this->classIndex->resolveFromVendor($handlerFqcn, $path);
+                    }
+
+                    if ($handlerClass === null) {
+                        continue;
+                    }
+
+                    $taskClass = $classes[$taskClassFqcn] ?? null;
+
+                    if ($taskClass === null) {
+                        $taskClass = $this->classIndex->resolveFromVendor($taskClassFqcn, $path);
+                    }
+
+                    $resolvedTaskHandlers[] = $this->taskHandlerAnalyzer->analyze(
+                        $handlerClass,
+                        $taskClassFqcn,
+                        $taskClass,
+                        $path
+                    );
+                }
+            }
+        }
+
+        if (!empty($resolvedTaskHandlers)) {
+            $output->info('Resolved ' . count($resolvedTaskHandlers) . ' task handlers');
+        }
+
+        // Resolve mutations
+        $mutationMap = [];
+        foreach ($initializers as $init) {
+            foreach ($init->mutations as $mutatorFqcn => $actions) {
+                if (!isset($mutationMap[$mutatorFqcn])) {
+                    $mutationMap[$mutatorFqcn] = [];
+                }
+                foreach ($actions as $action) {
+                    if (!in_array($action, $mutationMap[$mutatorFqcn], true)) {
+                        $mutationMap[$mutatorFqcn][] = $action;
+                    }
+                }
+            }
+        }
+
+        $resolvedMutations = [];
+        foreach ($mutationMap as $fqcn => $actions) {
+            $class = $classes[$fqcn] ?? null;
+
+            if ($class === null) {
+                $class = $this->classIndex->resolveFromVendor($fqcn, $path);
+            }
+
+            if ($class !== null) {
+                $resolvedMutations[$fqcn] = $this->mutationAnalyzer->analyze($class, $actions, $path);
+            }
+        }
+
+        if (!empty($resolvedMutations)) {
+            $output->info('Resolved ' . count($resolvedMutations) . ' mutations');
+        }
+
         // Build the index first (without dependency trees) so the resolver can use it
         $index = new ProjectIndex(
             $path,
@@ -213,7 +314,10 @@ class ProjectIndexer
             $dependencyTrees,
             $resolvedTables,
             $resolvedEvents,
-            $resolvedGraphQLTypes
+            $resolvedGraphQLTypes,
+            $resolvedFacades,
+            $resolvedTaskHandlers,
+            $resolvedMutations
         );
     }
 
@@ -239,6 +343,9 @@ class ProjectIndexer
         $this->writeJsonlFile($dir . '/tables.jsonl', $index->resolvedTables, fn($t) => $this->tableAdapter->toArray($t));
         $this->writeJsonlFile($dir . '/events.jsonl', $index->resolvedEvents, fn($e) => $this->eventAdapter->toArray($e));
         $this->writeJsonlFile($dir . '/graphql-types.jsonl', $index->resolvedGraphQLTypes, fn($t) => $this->graphQLTypeAdapter->toArray($t));
+        $this->writeJsonlFile($dir . '/facades.jsonl', $index->resolvedFacades, fn($f) => $this->facadeAdapter->toArray($f));
+        $this->writeJsonlFile($dir . '/task-handlers.jsonl', $index->resolvedTaskHandlers, fn($h) => $this->taskHandlerAdapter->toArray($h));
+        $this->writeJsonlFile($dir . '/mutations.jsonl', $index->resolvedMutations, fn($m) => $this->mutationAdapter->toArray($m));
 
         return $dir;
     }
@@ -266,6 +373,9 @@ class ProjectIndexer
         $resolvedTables = $this->readJsonlFile($dir . '/tables.jsonl', fn($d) => $this->tableAdapter->fromArray($d), 'fqcn');
         $resolvedEvents = $this->readJsonlFile($dir . '/events.jsonl', fn($d) => $this->eventAdapter->fromArray($d), 'fqcn');
         $resolvedGraphQLTypes = $this->readJsonlFile($dir . '/graphql-types.jsonl', fn($d) => $this->graphQLTypeAdapter->fromArray($d), 'fqcn');
+        $resolvedFacades = $this->readJsonlFile($dir . '/facades.jsonl', fn($d) => $this->facadeAdapter->fromArray($d), 'fqcn');
+        $resolvedTaskHandlers = $this->readJsonlFile($dir . '/task-handlers.jsonl', fn($d) => $this->taskHandlerAdapter->fromArray($d));
+        $resolvedMutations = $this->readJsonlFile($dir . '/mutations.jsonl', fn($d) => $this->mutationAdapter->fromArray($d), 'fqcn');
 
         return new ProjectIndex(
             $meta['projectPath'] ?? '',
@@ -278,7 +388,10 @@ class ProjectIndexer
             $dependencyTrees,
             $resolvedTables,
             $resolvedEvents,
-            $resolvedGraphQLTypes
+            $resolvedGraphQLTypes,
+            $resolvedFacades,
+            $resolvedTaskHandlers,
+            $resolvedMutations
         );
     }
 
@@ -335,6 +448,16 @@ class ProjectIndexer
             $graphQLTypes[$fqcn] = $this->graphQLTypeAdapter->toArray($type);
         }
 
+        $facades = [];
+        foreach ($index->resolvedFacades as $fqcn => $facade) {
+            $facades[$fqcn] = $this->facadeAdapter->toArray($facade);
+        }
+
+        $mutations = [];
+        foreach ($index->resolvedMutations as $fqcn => $mutation) {
+            $mutations[$fqcn] = $this->mutationAdapter->toArray($mutation);
+        }
+
         return [
             'projectPath' => $index->projectPath,
             'indexedAt' => $index->indexedAt,
@@ -347,6 +470,9 @@ class ProjectIndexer
             'resolvedTables' => $tables,
             'resolvedEvents' => $events,
             'resolvedGraphQLTypes' => $graphQLTypes,
+            'resolvedFacades' => $facades,
+            'resolvedTaskHandlers' => array_map(fn($h) => $this->taskHandlerAdapter->toArray($h), $index->resolvedTaskHandlers),
+            'resolvedMutations' => $mutations,
         ];
     }
 

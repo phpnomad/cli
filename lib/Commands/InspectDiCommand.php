@@ -85,6 +85,11 @@ class InspectDiCommand implements Command
         $this->output->writeln('  ' . $index->getTotalControllers() . ' controllers');
         $this->output->writeln('  ' . count($index->resolvedCommands) . ' commands');
         $this->output->writeln('  ' . $index->getTotalListeners() . ' listeners');
+        $this->output->writeln('  ' . count($index->resolvedTables) . ' tables');
+        $this->output->writeln('  ' . count($index->resolvedEvents) . ' events');
+        $this->output->writeln('  ' . count($index->resolvedFacades) . ' facades');
+        $this->output->writeln('  ' . count($index->resolvedTaskHandlers) . ' task handlers');
+        $this->output->writeln('  ' . count($index->resolvedMutations) . ' mutations');
         $this->output->writeln('  ' . count($index->dependencyTrees) . ' dependency trees');
     }
 
