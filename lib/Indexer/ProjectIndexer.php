@@ -8,6 +8,9 @@ use PHPNomad\Cli\Indexer\Adapters\IndexedClassAdapter;
 use PHPNomad\Cli\Indexer\Adapters\IndexedInitializerAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedCommandAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedControllerAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedEventAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedGraphQLTypeAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedTableAdapter;
 use PHPNomad\Cli\Indexer\Models\ProjectIndex;
 use PHPNomad\Console\Interfaces\OutputStrategy;
 
@@ -20,12 +23,18 @@ class ProjectIndexer
         protected ControllerAnalyzer $controllerAnalyzer,
         protected CommandAnalyzer $commandAnalyzer,
         protected DependencyResolver $dependencyResolver,
+        protected TableAnalyzer $tableAnalyzer,
+        protected EventAnalyzer $eventAnalyzer,
+        protected GraphQLTypeAnalyzer $graphQLTypeAnalyzer,
         protected IndexedClassAdapter $classAdapter,
         protected IndexedInitializerAdapter $initializerAdapter,
         protected IndexedApplicationAdapter $applicationAdapter,
         protected ResolvedControllerAdapter $controllerAdapter,
         protected ResolvedCommandAdapter $commandAdapter,
-        protected DependencyNodeAdapter $dependencyNodeAdapter
+        protected DependencyNodeAdapter $dependencyNodeAdapter,
+        protected ResolvedTableAdapter $tableAdapter,
+        protected ResolvedEventAdapter $eventAdapter,
+        protected ResolvedGraphQLTypeAdapter $graphQLTypeAdapter
     ) {
     }
 
@@ -132,6 +141,51 @@ class ProjectIndexer
 
         $output->writeln('  Resolved ' . count($resolvedCommands) . ' commands');
 
+        // Resolve tables
+        $resolvedTables = [];
+        foreach ($classes as $class) {
+            if ($this->tableAnalyzer->isTable($class)) {
+                $resolvedTables[$class->fqcn] = $this->tableAnalyzer->analyze($class, $path);
+            }
+        }
+
+        $output->info('Resolved ' . count($resolvedTables) . ' tables');
+
+        // Resolve events
+        $resolvedEvents = [];
+        foreach ($classes as $class) {
+            if ($this->eventAnalyzer->isEvent($class)) {
+                $resolvedEvents[$class->fqcn] = $this->eventAnalyzer->analyze($class, $path);
+            }
+        }
+
+        $output->info('Resolved ' . count($resolvedEvents) . ' events');
+
+        // Resolve GraphQL types
+        $graphQLTypeFqcns = [];
+        foreach ($initializers as $init) {
+            foreach ($init->typeDefinitions as $fqcn) {
+                $graphQLTypeFqcns[$fqcn] = true;
+            }
+        }
+
+        $resolvedGraphQLTypes = [];
+        foreach ($graphQLTypeFqcns as $fqcn => $_) {
+            $class = $classes[$fqcn] ?? null;
+
+            if ($class === null) {
+                $class = $this->classIndex->resolveFromVendor($fqcn, $path);
+            }
+
+            if ($class !== null) {
+                $resolvedGraphQLTypes[$fqcn] = $this->graphQLTypeAnalyzer->analyze($class, $path);
+            }
+        }
+
+        if (!empty($resolvedGraphQLTypes)) {
+            $output->info('Resolved ' . count($resolvedGraphQLTypes) . ' GraphQL types');
+        }
+
         // Build the index first (without dependency trees) so the resolver can use it
         $index = new ProjectIndex(
             $path,
@@ -156,7 +210,10 @@ class ProjectIndexer
             $initializers,
             $resolvedControllers,
             $resolvedCommands,
-            $dependencyTrees
+            $dependencyTrees,
+            $resolvedTables,
+            $resolvedEvents,
+            $resolvedGraphQLTypes
         );
     }
 
@@ -179,6 +236,9 @@ class ProjectIndexer
         $this->writeJsonlFile($dir . '/controllers.jsonl', $index->resolvedControllers, fn($c) => $this->controllerAdapter->toArray($c));
         $this->writeJsonlFile($dir . '/commands.jsonl', $index->resolvedCommands, fn($c) => $this->commandAdapter->toArray($c));
         $this->writeJsonlFile($dir . '/dependencies.jsonl', $index->dependencyTrees, fn($d) => $this->dependencyNodeAdapter->toArray($d));
+        $this->writeJsonlFile($dir . '/tables.jsonl', $index->resolvedTables, fn($t) => $this->tableAdapter->toArray($t));
+        $this->writeJsonlFile($dir . '/events.jsonl', $index->resolvedEvents, fn($e) => $this->eventAdapter->toArray($e));
+        $this->writeJsonlFile($dir . '/graphql-types.jsonl', $index->resolvedGraphQLTypes, fn($t) => $this->graphQLTypeAdapter->toArray($t));
 
         return $dir;
     }
@@ -203,6 +263,9 @@ class ProjectIndexer
         $resolvedControllers = $this->readJsonlFile($dir . '/controllers.jsonl', fn($d) => $this->controllerAdapter->fromArray($d), 'fqcn');
         $resolvedCommands = $this->readJsonlFile($dir . '/commands.jsonl', fn($d) => $this->commandAdapter->fromArray($d), 'fqcn');
         $dependencyTrees = $this->readJsonlFile($dir . '/dependencies.jsonl', fn($d) => $this->dependencyNodeAdapter->fromArray($d), 'abstract');
+        $resolvedTables = $this->readJsonlFile($dir . '/tables.jsonl', fn($d) => $this->tableAdapter->fromArray($d), 'fqcn');
+        $resolvedEvents = $this->readJsonlFile($dir . '/events.jsonl', fn($d) => $this->eventAdapter->fromArray($d), 'fqcn');
+        $resolvedGraphQLTypes = $this->readJsonlFile($dir . '/graphql-types.jsonl', fn($d) => $this->graphQLTypeAdapter->fromArray($d), 'fqcn');
 
         return new ProjectIndex(
             $meta['projectPath'] ?? '',
@@ -212,7 +275,10 @@ class ProjectIndexer
             $initializers,
             $resolvedControllers,
             $resolvedCommands,
-            $dependencyTrees
+            $dependencyTrees,
+            $resolvedTables,
+            $resolvedEvents,
+            $resolvedGraphQLTypes
         );
     }
 
@@ -254,6 +320,21 @@ class ProjectIndexer
             $dependencies[$abstract] = $this->dependencyNodeAdapter->toArray($tree);
         }
 
+        $tables = [];
+        foreach ($index->resolvedTables as $fqcn => $table) {
+            $tables[$fqcn] = $this->tableAdapter->toArray($table);
+        }
+
+        $events = [];
+        foreach ($index->resolvedEvents as $fqcn => $event) {
+            $events[$fqcn] = $this->eventAdapter->toArray($event);
+        }
+
+        $graphQLTypes = [];
+        foreach ($index->resolvedGraphQLTypes as $fqcn => $type) {
+            $graphQLTypes[$fqcn] = $this->graphQLTypeAdapter->toArray($type);
+        }
+
         return [
             'projectPath' => $index->projectPath,
             'indexedAt' => $index->indexedAt,
@@ -263,6 +344,9 @@ class ProjectIndexer
             'resolvedControllers' => $controllers,
             'resolvedCommands' => $commands,
             'dependencyTrees' => $dependencies,
+            'resolvedTables' => $tables,
+            'resolvedEvents' => $events,
+            'resolvedGraphQLTypes' => $graphQLTypes,
         ];
     }
 

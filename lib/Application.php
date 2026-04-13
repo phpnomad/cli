@@ -15,12 +15,18 @@ use PHPNomad\Cli\Indexer\Adapters\IndexedInitializerAdapter;
 use PHPNomad\Cli\Indexer\Adapters\InitializerReferenceAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedCommandAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedControllerAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedEventAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedGraphQLTypeAdapter;
+use PHPNomad\Cli\Indexer\Adapters\ResolvedTableAdapter;
 use PHPNomad\Cli\Indexer\BootSequenceWalker;
 use PHPNomad\Cli\Indexer\ClassIndex;
 use PHPNomad\Cli\Indexer\CommandAnalyzer;
 use PHPNomad\Cli\Indexer\ControllerAnalyzer;
 use PHPNomad\Cli\Indexer\DependencyResolver;
+use PHPNomad\Cli\Indexer\EventAnalyzer;
+use PHPNomad\Cli\Indexer\GraphQLTypeAnalyzer;
 use PHPNomad\Cli\Indexer\InitializerAnalyzer;
+use PHPNomad\Cli\Indexer\TableAnalyzer;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
 use PHPNomad\Cli\Strategies\ConsoleStrategy;
 use PHPNomad\Console\Interfaces\ConsoleStrategy as ConsoleStrategyInterface;
@@ -80,6 +86,9 @@ class Application
         $this->container->bindFactory(ResolvedControllerAdapter::class, fn() => new ResolvedControllerAdapter());
         $this->container->bindFactory(ResolvedCommandAdapter::class, fn() => new ResolvedCommandAdapter());
         $this->container->bindFactory(DependencyNodeAdapter::class, fn() => new DependencyNodeAdapter());
+        $this->container->bindFactory(ResolvedTableAdapter::class, fn() => new ResolvedTableAdapter());
+        $this->container->bindFactory(ResolvedEventAdapter::class, fn() => new ResolvedEventAdapter());
+        $this->container->bindFactory(ResolvedGraphQLTypeAdapter::class, fn() => new ResolvedGraphQLTypeAdapter());
 
         $this->container->bindFactory(
             IndexedClassAdapter::class,
@@ -110,6 +119,9 @@ class Application
         $this->container->bindFactory(InitializerAnalyzer::class, fn() => new InitializerAnalyzer());
         $this->container->bindFactory(ControllerAnalyzer::class, fn() => new ControllerAnalyzer());
         $this->container->bindFactory(CommandAnalyzer::class, fn() => new CommandAnalyzer());
+        $this->container->bindFactory(TableAnalyzer::class, fn() => new TableAnalyzer());
+        $this->container->bindFactory(EventAnalyzer::class, fn() => new EventAnalyzer());
+        $this->container->bindFactory(GraphQLTypeAnalyzer::class, fn() => new GraphQLTypeAnalyzer());
 
         $this->container->bindFactory(
             DependencyResolver::class,
@@ -125,12 +137,18 @@ class Application
                 $this->container->get(ControllerAnalyzer::class),
                 $this->container->get(CommandAnalyzer::class),
                 $this->container->get(DependencyResolver::class),
+                $this->container->get(TableAnalyzer::class),
+                $this->container->get(EventAnalyzer::class),
+                $this->container->get(GraphQLTypeAnalyzer::class),
                 $this->container->get(IndexedClassAdapter::class),
                 $this->container->get(IndexedInitializerAdapter::class),
                 $this->container->get(IndexedApplicationAdapter::class),
                 $this->container->get(ResolvedControllerAdapter::class),
                 $this->container->get(ResolvedCommandAdapter::class),
-                $this->container->get(DependencyNodeAdapter::class)
+                $this->container->get(DependencyNodeAdapter::class),
+                $this->container->get(ResolvedTableAdapter::class),
+                $this->container->get(ResolvedEventAdapter::class),
+                $this->container->get(ResolvedGraphQLTypeAdapter::class)
             )
         );
 

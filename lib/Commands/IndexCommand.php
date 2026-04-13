@@ -40,7 +40,8 @@ class IndexCommand implements Command
         $dir = $this->indexer->save($index, $path);
         $this->output->success("Index written to $dir/");
         $this->output->writeln('  meta.json, classes.jsonl, initializers.jsonl, applications.jsonl,');
-        $this->output->writeln('  controllers.jsonl, commands.jsonl, dependencies.jsonl');
+        $this->output->writeln('  controllers.jsonl, commands.jsonl, dependencies.jsonl,');
+        $this->output->writeln('  tables.jsonl, events.jsonl, graphql-types.jsonl');
 
         $this->output->newline();
         $this->output->info('Summary');
@@ -49,7 +50,10 @@ class IndexCommand implements Command
         $this->output->writeln('  Bindings:       ' . $index->getTotalBindings());
         $this->output->writeln('  Controllers:    ' . count($index->resolvedControllers));
         $this->output->writeln('  Commands:       ' . count($index->resolvedCommands));
+        $this->output->writeln('  Tables:         ' . count($index->resolvedTables));
+        $this->output->writeln('  Events:         ' . count($index->resolvedEvents));
         $this->output->writeln('  Listeners:      ' . $index->getTotalListeners());
+        $this->output->writeln('  GraphQL types:  ' . count($index->resolvedGraphQLTypes));
         $this->output->writeln('  Dependencies:   ' . count($index->dependencyTrees));
         $this->output->writeln('  Classes:        ' . count($index->classes));
 
