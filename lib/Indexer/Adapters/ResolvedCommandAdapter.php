@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedCommand;
 
 final class ResolvedCommandAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedCommand $command): array
     {
         return [
@@ -16,6 +19,9 @@ final class ResolvedCommandAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedCommand
     {
         return new ResolvedCommand(

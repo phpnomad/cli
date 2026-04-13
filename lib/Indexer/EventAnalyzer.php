@@ -36,8 +36,14 @@ class EventAnalyzer
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return new ResolvedEvent($class->fqcn, $class->file, null, []);
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return new ResolvedEvent($class->fqcn, $class->file, null, []);
         }

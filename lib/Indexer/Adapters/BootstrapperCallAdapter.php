@@ -11,6 +11,9 @@ final class BootstrapperCallAdapter
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(BootstrapperCall $call): array
     {
         return [
@@ -20,6 +23,9 @@ final class BootstrapperCallAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): BootstrapperCall
     {
         return new BootstrapperCall(

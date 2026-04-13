@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedFacade;
 
 class ResolvedFacadeAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedFacade $facade): array
     {
         return [
@@ -15,6 +18,9 @@ class ResolvedFacadeAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedFacade
     {
         return new ResolvedFacade(

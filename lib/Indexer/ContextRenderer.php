@@ -18,6 +18,9 @@ class ContextRenderer
         'mutations',
     ];
 
+    /**
+     * @param list<string>|null $sections
+     */
     public function render(ProjectIndex $index, ?array $sections = null): string
     {
         $out = $this->renderHeader($index);
@@ -385,7 +388,7 @@ class ContextRenderer
         return $out;
     }
 
-    protected function formatBinding($binding): string
+    protected function formatBinding(mixed $binding): string
     {
         $type = $binding->bindingType === 'imperative' ? 'factory' : 'bind';
         $concrete = $this->shortName($binding->concrete);

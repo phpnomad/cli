@@ -41,8 +41,14 @@ class ControllerAnalyzer
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return $this->unresolved($class);
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return $this->unresolved($class);
         }

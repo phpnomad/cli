@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4e52de17d2ff8a4c4d376b9d072c6e32",
+    "content-hash": "835d27b9c8ded235b60845f1d8c69daf",
     "packages": [
         {
             "name": "nikic/php-parser",
@@ -1719,6 +1719,112 @@
             "time": "2022-02-21T01:04:05+00:00"
         },
         {
+            "name": "phpnomad/phpstan-rules",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phpnomad/phpstan-rules.git",
+                "reference": "5689f96d84373fcb6f1162ee3b9d0723e075307a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpnomad/phpstan-rules/zipball/5689f96d84373fcb6f1162ee3b9d0723e075307a",
+                "reference": "5689f96d84373fcb6f1162ee3b9d0723e075307a",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2",
+                "phpstan/phpstan": "^2.0"
+            },
+            "require-dev": {
+                "phpstan/extension-installer": "^1.0",
+                "phpunit/phpunit": "^10.0 || ^11.0"
+            },
+            "default-branch": true,
+            "type": "phpstan-extension",
+            "extra": {
+                "phpstan": {
+                    "includes": [
+                        "extension.neon"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "PHPNomad\\PhpstanRules\\": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Alex Standiford",
+                    "email": "alex@standiford.us"
+                }
+            ],
+            "description": "PHPStan rules for PHPNomad framework conventions",
+            "support": {
+                "issues": "https://github.com/phpnomad/phpstan-rules/issues",
+                "source": "https://github.com/phpnomad/phpstan-rules/tree/main"
+            },
+            "time": "2026-04-13T21:42:16+00:00"
+        },
+        {
+            "name": "phpstan/phpstan",
+            "version": "2.1.47",
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/79015445d8bd79e62b29140f12e5bfced1dcca65",
+                "reference": "79015445d8bd79e62b29140f12e5bfced1dcca65",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.4|^8.0"
+            },
+            "conflict": {
+                "phpstan/phpstan-shim": "*"
+            },
+            "bin": [
+                "phpstan",
+                "phpstan.phar"
+            ],
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "bootstrap.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHPStan - PHP Static Analysis Tool",
+            "keywords": [
+                "dev",
+                "static analysis"
+            ],
+            "support": {
+                "docs": "https://phpstan.org/user-guide/getting-started",
+                "forum": "https://github.com/phpstan/phpstan/discussions",
+                "issues": "https://github.com/phpstan/phpstan/issues",
+                "security": "https://github.com/phpstan/phpstan/security/policy",
+                "source": "https://github.com/phpstan/phpstan-src"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/ondrejmirtes",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/phpstan",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-04-13T15:49:08+00:00"
+        },
+        {
             "name": "phpunit/php-code-coverage",
             "version": "11.0.12",
             "source": {
@@ -3266,7 +3372,9 @@
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": {},
+    "stability-flags": {
+        "phpnomad/phpstan-rules": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

@@ -26,8 +26,14 @@ class CommandAnalyzer
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return new ResolvedCommand($class->fqcn, $class->file, null, null);
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return new ResolvedCommand($class->fqcn, $class->file, null, null);
         }

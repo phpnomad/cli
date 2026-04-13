@@ -11,6 +11,9 @@ final class IndexedInitializerAdapter
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(IndexedInitializer $init): array
     {
         return [
@@ -33,6 +36,9 @@ final class IndexedInitializerAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): IndexedInitializer
     {
         return new IndexedInitializer(

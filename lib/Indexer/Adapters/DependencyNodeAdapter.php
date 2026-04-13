@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\DependencyNode;
 
 final class DependencyNodeAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(DependencyNode $node): array
     {
         return [
@@ -17,6 +20,9 @@ final class DependencyNodeAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): DependencyNode
     {
         return new DependencyNode(

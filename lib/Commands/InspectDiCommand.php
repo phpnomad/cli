@@ -145,13 +145,13 @@ class InspectDiCommand implements Command
             $init = $index->initializers[$fqcn] ?? null;
 
             if ($init === null) {
-                $this->output->writeln('  ' . $this->pad('#' . $number, 5) . $this->shortName($fqcn) . ' (not analyzed)');
+                $this->output->writeln('  ' . $this->pad('#' . $number, 5) . $this->shortName($fqcn ?? '') . ' (not analyzed)');
                 continue;
             }
 
             $vendorTag = $init->isVendor ? ' (vendor)' : '';
             $summary = $init->getSummary();
-            $label = $this->shortName($fqcn) . $vendorTag;
+            $label = $this->shortName($fqcn ?? '') . $vendorTag;
             $this->output->writeln('  ' . $this->pad('#' . $number, 5) . $this->pad($label, 48) . $summary);
         }
     }

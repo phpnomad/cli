@@ -41,8 +41,14 @@ class InitializerAnalyzer
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return $this->emptyInitializer($class);
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return $this->emptyInitializer($class);
         }
@@ -365,6 +371,9 @@ class InitializerAnalyzer
         return null;
     }
 
+    /**
+     * @param string[] $implements
+     */
     protected function hasInterface(array $implements, string $fqcn): bool
     {
         return in_array($fqcn, $implements, true);

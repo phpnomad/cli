@@ -11,6 +11,9 @@ final class IndexedClassAdapter
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(IndexedClass $class): array
     {
         return [
@@ -26,6 +29,9 @@ final class IndexedClassAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): IndexedClass
     {
         return new IndexedClass(

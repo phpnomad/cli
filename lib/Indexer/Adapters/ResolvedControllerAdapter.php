@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedController;
 
 final class ResolvedControllerAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedController $controller): array
     {
         return [
@@ -21,6 +24,9 @@ final class ResolvedControllerAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedController
     {
         return new ResolvedController(

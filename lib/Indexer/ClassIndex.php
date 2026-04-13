@@ -9,6 +9,7 @@ use PhpParser\Node\Stmt;
 use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
+use PhpParser\Parser;
 use PhpParser\ParserFactory;
 use Symfony\Component\Finder\Finder;
 
@@ -66,7 +67,13 @@ class ClassIndex
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
         $relativePath = $this->relativePath($basePath, $filePath);
-        $results = $this->parseFile($parser, file_get_contents($filePath), $relativePath);
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return null;
+        }
+
+        $results = $this->parseFile($parser, $code, $relativePath);
 
         foreach ($results as $class) {
             $this->vendorCache[$class->fqcn] = $class;
@@ -130,7 +137,7 @@ class ClassIndex
      *
      * @return IndexedClass[]
      */
-    protected function parseFile($parser, string $code, string $relativePath): array
+    protected function parseFile(Parser $parser, string $code, string $relativePath): array
     {
         try {
             $ast = $parser->parse($code);
@@ -199,6 +206,10 @@ class ClassIndex
                     }
                 }
 
+                if (!$param->var instanceof Node\Expr\Variable || !is_string($param->var->name)) {
+                    continue;
+                }
+
                 $constructorParams[] = new ConstructorParam(
                     $param->var->name,
                     $type,
@@ -239,7 +250,7 @@ class ClassIndex
         $lines = explode("\n", $docComment->getText());
 
         foreach ($lines as $line) {
-            $cleaned = trim(preg_replace('/^[\s\/*]+/', '', $line));
+            $cleaned = trim(preg_replace('/^[\s\/*]+/', '', $line) ?? '');
 
             if ($cleaned !== '' && !str_starts_with($cleaned, '@')) {
                 return $cleaned;

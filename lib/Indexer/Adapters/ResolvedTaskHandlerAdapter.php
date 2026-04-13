@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedTaskHandler;
 
 class ResolvedTaskHandlerAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedTaskHandler $handler): array
     {
         return [
@@ -17,6 +20,9 @@ class ResolvedTaskHandlerAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedTaskHandler
     {
         return new ResolvedTaskHandler(

@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedGraphQLType;
 
 final class ResolvedGraphQLTypeAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedGraphQLType $type): array
     {
         return [
@@ -16,6 +19,9 @@ final class ResolvedGraphQLTypeAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedGraphQLType
     {
         return new ResolvedGraphQLType(

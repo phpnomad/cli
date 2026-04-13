@@ -51,8 +51,14 @@ class BootSequenceWalker
     {
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return null;
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return null;
         }
@@ -150,6 +156,11 @@ class BootSequenceWalker
         ];
     }
 
+    /**
+     * @param BootstrapperCall[] $bootstrapperCalls
+     * @param IndexedBinding[] $preBindings
+     * @param IndexedBinding[] $postBindings
+     */
     protected function walkStatement(
         Node $stmt,
         string $methodName,
@@ -226,6 +237,8 @@ class BootSequenceWalker
 
     /**
      * Extract the ordered list of InitializerReferences from a new Bootstrapper(...) call.
+     *
+     * @return InitializerReference[]
      */
     protected function extractInitializerRefs(Expr\New_ $newExpr, Stmt\Class_ $classNode): array
     {
@@ -270,7 +283,7 @@ class BootSequenceWalker
             return $this->resolveVariableInClass($expr->name, $classNode);
         }
 
-        return [new InitializerReference(null, '$' . ($expr instanceof Expr\Variable ? $expr->name : 'unknown'), true)];
+        return [new InitializerReference(null, '$' . ($expr instanceof Expr\Variable && is_string($expr->name) ? $expr->name : 'unknown'), true)];
     }
 
     /**
@@ -369,7 +382,7 @@ class BootSequenceWalker
 
             // Also check method parameters — if it's a parameter, it's dynamic
             foreach ($method->params as $param) {
-                if ($param->var->name === $varName) {
+                if ($param->var instanceof Expr\Variable && $param->var->name === $varName) {
                     return [new InitializerReference(null, '$' . $varName, true)];
                 }
             }
@@ -513,6 +526,10 @@ class BootSequenceWalker
             return null;
         }
 
+        if (!$args[0] instanceof Node\Arg) {
+            return null;
+        }
+
         $concrete = $this->resolveClassConstFetch($args[0]->value);
 
         if ($concrete === null) {
@@ -522,6 +539,10 @@ class BootSequenceWalker
         $abstracts = [];
 
         for ($i = 1; $i < count($args); $i++) {
+            if (!$args[$i] instanceof Node\Arg) {
+                continue;
+            }
+
             $abstract = $this->resolveClassConstFetch($args[$i]->value);
 
             if ($abstract !== null) {
@@ -544,6 +565,10 @@ class BootSequenceWalker
         $args = $call->args;
 
         if (count($args) < 1) {
+            return null;
+        }
+
+        if (!$args[0] instanceof Node\Arg) {
             return null;
         }
 

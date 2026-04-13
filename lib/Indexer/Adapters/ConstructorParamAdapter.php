@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ConstructorParam;
 
 final class ConstructorParamAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ConstructorParam $param): array
     {
         return [
@@ -15,6 +18,9 @@ final class ConstructorParamAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ConstructorParam
     {
         return new ConstructorParam(

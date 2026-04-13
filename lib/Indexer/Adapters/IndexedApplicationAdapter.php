@@ -12,6 +12,9 @@ final class IndexedApplicationAdapter
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(IndexedApplication $app): array
     {
         return [
@@ -23,6 +26,9 @@ final class IndexedApplicationAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): IndexedApplication
     {
         return new IndexedApplication(

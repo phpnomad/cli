@@ -46,8 +46,14 @@ class TableAnalyzer
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return new ResolvedTable($class->fqcn, $class->file, null, []);
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return new ResolvedTable($class->fqcn, $class->file, null, []);
         }
@@ -85,6 +91,8 @@ class TableAnalyzer
 
     /**
      * Extract column definitions from getColumns() return array.
+     *
+     * @return list<array{name: string, type: string, typeArgs: ?list<int|float>, attributes: list<string>, factory: ?string}>
      */
     protected function extractColumns(Stmt\Class_ $classNode): array
     {
@@ -119,6 +127,8 @@ class TableAnalyzer
 
     /**
      * Parse a single column expression: new Column(...) or (new Factory())->toColumn()
+     *
+     * @return ?array{name: string, type: string, typeArgs: ?list<int|float>, attributes: list<string>, factory: ?string}
      */
     protected function parseColumnExpression(Node\Expr $expr): ?array
     {
@@ -156,6 +166,9 @@ class TableAnalyzer
 
     /**
      * Parse new Column(name, type, typeArgs, ...attributes) args.
+     *
+     * @param array<mixed> $args
+     * @return ?array{name: string, type: string, typeArgs: ?list<int|float>, attributes: list<string>, factory: ?string}
      */
     protected function parseColumnArgs(array $args): ?array
     {
@@ -201,6 +214,9 @@ class TableAnalyzer
 
     /**
      * Parse ForeignKeyFactory constructor args.
+     *
+     * @param array<mixed> $args
+     * @return ?array{name: string, type: string, typeArgs: null, attributes: list<string>, factory: string}
      */
     protected function parseForeignKeyFactory(array $args): ?array
     {

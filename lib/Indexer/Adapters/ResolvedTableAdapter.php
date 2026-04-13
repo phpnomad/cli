@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedTable;
 
 final class ResolvedTableAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedTable $table): array
     {
         return [
@@ -16,6 +19,9 @@ final class ResolvedTableAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedTable
     {
         return new ResolvedTable(

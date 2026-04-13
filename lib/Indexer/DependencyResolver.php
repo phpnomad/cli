@@ -82,6 +82,7 @@ class DependencyResolver
     /**
      * Recursively resolve a dependency node.
      *
+     * @param array<string, IndexedBinding> $bindingMap
      * @param array<string, bool> $visited Cycle detection per branch
      */
     protected function resolveNode(
@@ -148,6 +149,8 @@ class DependencyResolver
      * Resolve constructor parameter dependencies.
      *
      * @param \PHPNomad\Cli\Indexer\Models\ConstructorParam[] $params
+     * @param array<string, IndexedBinding> $bindingMap
+     * @param array<string, bool> $visited
      * @return DependencyNode[]
      */
     protected function resolveConstructorDeps(

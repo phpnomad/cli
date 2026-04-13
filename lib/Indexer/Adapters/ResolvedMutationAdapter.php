@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedMutation;
 
 class ResolvedMutationAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedMutation $mutation): array
     {
         return [
@@ -17,6 +20,9 @@ class ResolvedMutationAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedMutation
     {
         return new ResolvedMutation(

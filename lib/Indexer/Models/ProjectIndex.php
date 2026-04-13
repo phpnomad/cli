@@ -76,6 +76,9 @@ final class ProjectIndex
         return $count;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getMeta(): array
     {
         return [

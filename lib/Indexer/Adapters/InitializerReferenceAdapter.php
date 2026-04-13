@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\InitializerReference;
 
 final class InitializerReferenceAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(InitializerReference $ref): array
     {
         return [
@@ -15,6 +18,9 @@ final class InitializerReferenceAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): InitializerReference
     {
         return new InitializerReference(

@@ -18,6 +18,8 @@ class MutationAnalyzer
 
     /**
      * Resolve a mutation handler into its details.
+     *
+     * @param list<string> $actions
      */
     public function analyze(IndexedClass $class, array $actions, string $basePath): ResolvedMutation
     {
@@ -50,8 +52,14 @@ class MutationAnalyzer
 
         $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
+        $code = file_get_contents($filePath);
+
+        if ($code === false) {
+            return null;
+        }
+
         try {
-            $ast = $parser->parse(file_get_contents($filePath));
+            $ast = $parser->parse($code);
         } catch (\Throwable $e) {
             return null;
         }

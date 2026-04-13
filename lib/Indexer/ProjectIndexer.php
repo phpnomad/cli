@@ -364,7 +364,13 @@ class ProjectIndexer
             return null;
         }
 
-        $meta = json_decode(file_get_contents($metaFile), true);
+        $metaContents = file_get_contents($metaFile);
+
+        if ($metaContents === false) {
+            return null;
+        }
+
+        $meta = json_decode($metaContents, true);
 
         $classes = $this->readJsonlFile($dir . '/classes.jsonl', fn($d) => $this->classAdapter->fromArray($d), 'fqcn');
         $initializers = $this->readJsonlFile($dir . '/initializers.jsonl', fn($d) => $this->initializerAdapter->fromArray($d), 'fqcn');
@@ -402,11 +408,13 @@ class ProjectIndexer
      */
     public function toJson(ProjectIndex $index): string
     {
-        return json_encode($this->toArray($index), JSON_UNESCAPED_SLASHES);
+        return json_encode($this->toArray($index), JSON_UNESCAPED_SLASHES) ?: '{}';
     }
 
     /**
      * Convert the full index to a nested array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(ProjectIndex $index): array
     {
@@ -480,10 +488,16 @@ class ProjectIndexer
 
     /**
      * Write an array of items to a JSONL file.
+     *
+     * @param array<mixed> $items
      */
     protected function writeJsonlFile(string $filePath, array $items, callable $toArray): void
     {
         $fh = fopen($filePath, 'w');
+
+        if ($fh === false) {
+            return;
+        }
 
         foreach ($items as $item) {
             fwrite($fh, json_encode($toArray($item), JSON_UNESCAPED_SLASHES) . "\n");
@@ -496,6 +510,7 @@ class ProjectIndexer
      * Read items from a JSONL file.
      *
      * @param ?string $keyField If provided, the resulting array is keyed by this field from the raw data
+     * @return array<mixed>
      */
     protected function readJsonlFile(string $filePath, callable $fromArray, ?string $keyField = null): array
     {
@@ -505,7 +520,7 @@ class ProjectIndexer
 
         $items = [];
 
-        foreach (file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        foreach (file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
             $data = json_decode($line, true);
 
             if ($data === null) {

@@ -6,6 +6,9 @@ use PHPNomad\Cli\Indexer\Models\ResolvedEvent;
 
 final class ResolvedEventAdapter
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(ResolvedEvent $event): array
     {
         return [
@@ -16,6 +19,9 @@ final class ResolvedEventAdapter
         ];
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function fromArray(array $data): ResolvedEvent
     {
         return new ResolvedEvent(
