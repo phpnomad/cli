@@ -1,0 +1,42 @@
+{
+    "name": "phpnomad/cli",
+    "description": "PHPNomad CLI — scaffolding, introspection, and validation tools for PHPNomad projects",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alex Standiford",
+            "email": "alex@standiford.us"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "nikic/php-parser": "^5.0",
+        "symfony/finder": "^7.2",
+        "phpnomad/console": "^1.0",
+        "phpnomad/di-container": "^1.0",
+        "phpnomad/symfony-console-integration": "^1.0",
+        "phpnomad/utils": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0 || ^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PHPNomad\\Cli\\": "lib/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PHPNomad\\Cli\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/phpnomad"
+    ],
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

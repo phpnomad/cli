@@ -1,0 +1,50 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * PHPNomad CLI — Entry Point
+ *
+ * Usage: phpnomad <command> [args] [--options]
+ *
+ * Examples:
+ *   phpnomad inspect:routes
+ *   phpnomad inspect:routes --format=json
+ */
+
+// Locate autoloader — support both standalone and installed-as-dependency.
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',     // standalone checkout
+    __DIR__ . '/../../../autoload.php',      // installed under parent vendor/
+];
+
+$autoloadFound = false;
+foreach ($autoloadPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $autoloadFound = true;
+        break;
+    }
+}
+
+if (!$autoloadFound) {
+    fwrite(STDERR, "Could not locate Composer autoloader. Run 'composer install' in the phpnomad/cli directory.\n");
+    exit(1);
+}
+
+use PHPNomad\Cli\Application;
+use PHPNomad\Cli\Strategies\ConsoleStrategy;
+use PHPNomad\Console\Interfaces\OutputStrategy;
+
+$app = new Application();
+$app->boot();
+
+$container = $app->getContainer();
+
+/** @var ConsoleStrategy $consoleStrategy */
+$consoleStrategy = $container->get(ConsoleStrategy::class);
+
+/** @var OutputStrategy $output */
+$output = $container->get(OutputStrategy::class);
+
+$exitCode = $consoleStrategy->dispatch($argv, $output);
+exit($exitCode);
