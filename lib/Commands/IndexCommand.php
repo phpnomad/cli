@@ -42,7 +42,8 @@ class IndexCommand implements Command
         $this->output->writeln('  meta.json, classes.jsonl, initializers.jsonl, applications.jsonl,');
         $this->output->writeln('  controllers.jsonl, commands.jsonl, dependencies.jsonl,');
         $this->output->writeln('  tables.jsonl, events.jsonl, graphql-types.jsonl,');
-        $this->output->writeln('  facades.jsonl, task-handlers.jsonl, mutations.jsonl');
+        $this->output->writeln('  facades.jsonl, task-handlers.jsonl, mutations.jsonl,');
+        $this->output->writeln('  phpnomad-cli.md');
 
         $this->output->newline();
         $this->output->info('Summary');
