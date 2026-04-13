@@ -213,6 +213,8 @@ class ClassIndex
             $parentClass = $classNode->extends->toString();
         }
 
+        $description = $this->extractDescription($classNode);
+
         return new IndexedClass(
             $fqcn,
             $file,
@@ -221,8 +223,30 @@ class ClassIndex
             $traits,
             $constructorParams,
             $classNode->isAbstract(),
-            $parentClass
+            $parentClass,
+            $description
         );
+    }
+
+    protected function extractDescription(Stmt\Class_ $classNode): ?string
+    {
+        $docComment = $classNode->getDocComment();
+
+        if ($docComment === null) {
+            return null;
+        }
+
+        $lines = explode("\n", $docComment->getText());
+
+        foreach ($lines as $line) {
+            $cleaned = trim(preg_replace('/^[\s\/*]+/', '', $line));
+
+            if ($cleaned !== '' && !str_starts_with($cleaned, '@')) {
+                return $cleaned;
+            }
+        }
+
+        return null;
     }
 
     protected function relativePath(string $basePath, string $absolutePath): string

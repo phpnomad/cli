@@ -13,6 +13,7 @@ final class IndexedClass
      * @param ConstructorParam[] $constructorParams
      * @param bool $isAbstract
      * @param ?string $parentClass
+     * @param ?string $description First line of the class PHPDoc comment
      */
     public function __construct(
         public readonly string $fqcn,
@@ -22,7 +23,8 @@ final class IndexedClass
         public readonly array $traits,
         public readonly array $constructorParams,
         public readonly bool $isAbstract,
-        public readonly ?string $parentClass
+        public readonly ?string $parentClass,
+        public readonly ?string $description
     ) {
     }
 }

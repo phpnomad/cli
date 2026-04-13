@@ -22,6 +22,7 @@ final class IndexedClassAdapter
             'constructorParams' => array_map(fn($p) => $this->paramAdapter->toArray($p), $class->constructorParams),
             'isAbstract' => $class->isAbstract,
             'parentClass' => $class->parentClass,
+            'description' => $class->description,
         ];
     }
 
@@ -35,7 +36,8 @@ final class IndexedClassAdapter
             traits: $data['traits'] ?? [],
             constructorParams: array_map(fn($p) => $this->paramAdapter->fromArray($p), $data['constructorParams'] ?? []),
             isAbstract: $data['isAbstract'] ?? false,
-            parentClass: $data['parentClass'] ?? null
+            parentClass: $data['parentClass'] ?? null,
+            description: $data['description'] ?? null
         );
     }
 }
