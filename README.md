@@ -14,6 +14,12 @@ PHPNomad CLI scans a target project directory, walks the `Application -> Bootstr
 4. **ControllerAnalyzer** resolves each registered controller class to extract endpoint paths, HTTP methods, and middleware/validation/interceptor capabilities.
 5. **CommandAnalyzer** extracts CLI signatures and descriptions from registered command classes.
 6. **DependencyResolver** builds recursive dependency trees by merging all binding sources and walking constructor params through the binding map.
+7. **TableAnalyzer** extracts table schemas from classes extending the Table abstract, including column types, factory patterns, and foreign key references.
+8. **EventAnalyzer** resolves event classes to extract their string IDs and payload properties.
+9. **GraphQLTypeAnalyzer** extracts SDL definitions and resolver mappings from GraphQL type definitions.
+10. **FacadeAnalyzer** resolves facade classes to extract which interface each proxies via `abstractInstance()`.
+11. **TaskHandlerAnalyzer** links task handler classes to their task classes and extracts the task's runtime ID.
+12. **MutationAnalyzer** resolves mutation handlers, detecting adapter trait usage and action mappings.
 
 ### Output format
 
@@ -28,6 +34,12 @@ The index is written as JSONL files in `.phpnomad/` for token-efficient consumpt
   controllers.jsonl    # One resolved controller per line (endpoint, method, capabilities)
   commands.jsonl       # One resolved command per line (signature, description)
   dependencies.jsonl   # One dependency tree per line (recursive resolution chain)
+  tables.jsonl         # One table per line (name, columns, types, foreign keys)
+  events.jsonl         # One event per line (event ID, payload properties)
+  graphql-types.jsonl  # One GraphQL type per line (SDL, resolvers)
+  facades.jsonl        # One facade per line (proxied interface)
+  task-handlers.jsonl  # One handler per line (task class, task ID)
+  mutations.jsonl      # One mutation handler per line (actions, adapter info)
 ```
 
 Each line is a self-contained JSON object. An AI agent can `grep "PayoutDatastore" .phpnomad/dependencies.jsonl` to find a specific dependency chain without loading 1000+ records.
@@ -81,6 +93,11 @@ Summary
   110 controllers
   23 commands
   151 listeners
+  39 tables
+  82 events
+  29 facades
+  1 task handlers
+  0 mutations
   186 dependency trees
 ```
 
