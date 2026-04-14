@@ -2,10 +2,14 @@
 
 namespace {{namespace}};
 
-class {{name}}
+use PHPNomad\Http\Interfaces\Request;
+use PHPNomad\Http\Interfaces\Response;
+use PHPNomad\Rest\Interfaces\Controller;
+
+class {{name}} implements Controller
 {
     public function __construct(
-        // TODO: Add constructor dependencies
+        protected Response $response,
     ) {
     }
 
@@ -19,8 +23,9 @@ class {{name}}
         return '{{endpoint}}';
     }
 
-    public function handle()
+    public function getResponse(Request $request): Response
     {
         // TODO: Implement controller logic
+        return $this->response;
     }
 }
