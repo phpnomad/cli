@@ -22,6 +22,7 @@ class VarResolver
             $vars[$key] = $value;
             $vars[$key . 'Lower'] = lcfirst($value);
             $vars[$key . 'Snake'] = $this->toSnakeCase($value);
+            $vars[$key . 'Short'] = $this->toShortName($value);
         }
 
         // File-level vars override (may contain {{var}} references)
@@ -77,5 +78,18 @@ class VarResolver
     {
         $result = preg_replace('/([a-z])([A-Z])/', '$1_$2', $value);
         return strtolower($result ?? $value);
+    }
+
+    /**
+     * Extract the short class name from a FQCN, or return the value as-is if not a FQCN.
+     */
+    protected function toShortName(string $value): string
+    {
+        if (str_contains($value, '\\')) {
+            $parts = explode('\\', $value);
+            return end($parts);
+        }
+
+        return $value;
     }
 }

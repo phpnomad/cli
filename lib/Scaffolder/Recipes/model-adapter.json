@@ -1,0 +1,22 @@
+{
+    "name": "model-adapter",
+    "description": "Creates a model adapter for converting between models and arrays",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Adapter class name (e.g. PayoutAdapter)"
+        },
+        "model": {
+            "type": "string",
+            "description": "FQCN of the model class"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Models/Adapters/{{name}}.php",
+            "template": "model-adapter"
+        }
+    ],
+    "registrations": []
+}

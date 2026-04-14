@@ -1,0 +1,18 @@
+{
+    "name": "model",
+    "description": "Creates a data model class with identity support",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Model class name (e.g. Payout)"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Models/{{name}}.php",
+            "template": "model"
+        }
+    ],
+    "registrations": []
+}

@@ -1,0 +1,48 @@
+{
+    "name": "datastore",
+    "description": "Creates a datastore with interface, handler interface, and implementation class",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Entity name (e.g. Payout)"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register DI bindings in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Datastores/{{name}}/{{name}}Datastore.php",
+            "template": "datastore",
+            "vars": {
+                "className": "{{name}}Datastore"
+            }
+        },
+        {
+            "path": "lib/Datastores/{{name}}/Interfaces/{{name}}Datastore.php",
+            "template": "datastore-interface",
+            "vars": {
+                "className": "{{name}}Datastore"
+            }
+        },
+        {
+            "path": "lib/Datastores/{{name}}/Interfaces/{{name}}DatastoreHandler.php",
+            "template": "datastore-handler-interface",
+            "vars": {
+                "className": "{{name}}DatastoreHandler"
+            }
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getClassDefinitions",
+            "interface": "PHPNomad\\Loader\\Interfaces\\HasClassDefinitions",
+            "type": "map",
+            "key": "{{namespace}}\\{{name}}Datastore",
+            "value": "{{namespace}}\\Interfaces\\{{name}}Datastore"
+        }
+    ]
+}

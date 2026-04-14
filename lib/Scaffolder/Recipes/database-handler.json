@@ -1,0 +1,52 @@
+{
+    "name": "database-handler",
+    "description": "Creates a database datastore handler that implements a datastore handler interface",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Entity name (e.g. Payout)"
+        },
+        "handlerInterface": {
+            "type": "string",
+            "description": "FQCN of the datastore handler interface"
+        },
+        "model": {
+            "type": "string",
+            "description": "FQCN of the model class"
+        },
+        "modelAdapter": {
+            "type": "string",
+            "description": "FQCN of the model adapter class"
+        },
+        "table": {
+            "type": "string",
+            "description": "FQCN of the table class"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register DI binding in"
+        }
+    },
+    "requires": [
+        {"type": "binding", "value": "DatabaseStrategy"}
+    ],
+    "files": [
+        {
+            "path": "lib/Datastores/{{name}}/{{name}}DatabaseDatastoreHandler.php",
+            "template": "database-handler",
+            "vars": {
+                "className": "{{name}}DatabaseDatastoreHandler"
+            }
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getClassDefinitions",
+            "interface": "PHPNomad\\Loader\\Interfaces\\HasClassDefinitions",
+            "type": "map",
+            "key": "{{namespace}}\\{{name}}DatabaseDatastoreHandler",
+            "value": "{{handlerInterface}}"
+        }
+    ]
+}
