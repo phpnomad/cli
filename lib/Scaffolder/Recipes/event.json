@@ -1,0 +1,22 @@
+{
+    "name": "event",
+    "description": "Creates an event class with a unique ID",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Event class name (e.g. UserCreated)"
+        },
+        "eventId": {
+            "type": "string",
+            "description": "Unique event identifier (e.g. user.created)"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Events/{{name}}.php",
+            "template": "event"
+        }
+    ],
+    "registrations": []
+}

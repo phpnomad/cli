@@ -1,0 +1,38 @@
+{
+    "name": "command",
+    "description": "Creates a CLI command and registers it in an initializer",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Command class name (e.g. DeployCommand)"
+        },
+        "signature": {
+            "type": "string",
+            "description": "Command signature (e.g. deploy {env:Target environment})"
+        },
+        "description": {
+            "type": "string",
+            "description": "Short description for help output"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Commands/{{name}}.php",
+            "template": "command"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getCommands",
+            "interface": "PHPNomad\\Console\\Interfaces\\HasCommands",
+            "type": "list",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}

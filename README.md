@@ -138,6 +138,23 @@ Summary
 
 Controllers using the `WithEndpointBase` trait show `{base}` as a prefix since the base path is resolved at runtime from a configuration provider.
 
+### `phpnomad make`
+
+Generate PHP files from a recipe spec and register them in the project.
+
+```bash
+phpnomad make --from=listener '{"name":"SendWelcomeEmail","event":"App\\Events\\UserCreated","initializer":"App\\AppInit"}'
+phpnomad make --from=event '{"name":"UserCreated","eventId":"user.created"}'
+phpnomad make --from=command '{"name":"DeployCommand","signature":"deploy {env}","description":"Deploy to env","initializer":"App\\AppInit"}'
+phpnomad make --from=controller '{"name":"GetUsers","method":"GET","endpoint":"/users","initializer":"App\\AppInit"}'
+```
+
+The `--from` flag accepts a built-in recipe name (`listener`, `event`, `command`, `controller`) or a path to a custom JSON spec file. Variables are passed as a JSON object argument.
+
+Each recipe generates the PHP file(s) with proper namespace, interface implementations, and TODO markers, then automatically registers the new class in the specified initializer via AST mutation. If the initializer doesn't have the required method (e.g. `getListeners()`), the scaffolder creates it and adds the corresponding `Has*` interface.
+
+Custom recipes can create multiple files and registrations in a single spec, enabling full feature scaffolding (e.g., a datastore with its interface, CRUD controllers, events, and listeners) from one command.
+
 ## Installation
 
 ```bash

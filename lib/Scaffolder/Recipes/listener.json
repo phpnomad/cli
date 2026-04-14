@@ -1,0 +1,35 @@
+{
+    "name": "listener",
+    "description": "Creates an event listener and registers it in an initializer",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Listener class name (e.g. SendWelcomeEmail)"
+        },
+        "event": {
+            "type": "string",
+            "description": "FQCN of the event class to listen to"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Listeners/{{name}}.php",
+            "template": "listener"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getListeners",
+            "interface": "PHPNomad\\Events\\Interfaces\\HasListeners",
+            "type": "map",
+            "key": "{{event}}",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}

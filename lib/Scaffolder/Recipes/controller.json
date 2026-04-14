@@ -1,0 +1,38 @@
+{
+    "name": "controller",
+    "description": "Creates a REST controller and registers it in an initializer",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Controller class name (e.g. GetUsers)"
+        },
+        "method": {
+            "type": "string",
+            "description": "HTTP method (GET, POST, PUT, DELETE, PATCH)"
+        },
+        "endpoint": {
+            "type": "string",
+            "description": "Endpoint path (e.g. /users)"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Rest/{{name}}.php",
+            "template": "controller"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getControllers",
+            "interface": "PHPNomad\\Rest\\Interfaces\\HasControllers",
+            "type": "list",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}
