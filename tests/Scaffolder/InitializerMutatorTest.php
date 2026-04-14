@@ -365,6 +365,92 @@ PHP);
         $this->assertStringContainsString('Already registered', $result->message);
     }
 
+    public function testEntriesFormattedOnSeparateLines(): void
+    {
+        $file = $this->writeInitializer(<<<'PHP'
+<?php
+
+namespace App;
+
+use PHPNomad\Events\Interfaces\HasListeners;
+
+class AppInit implements HasListeners
+{
+    public function getListeners(): array
+    {
+        return [
+            \App\Events\UserCreated::class => \App\Listeners\OnUserCreated::class,
+        ];
+    }
+}
+PHP);
+
+        $entries = [
+            ['App\\Events\\OrderPlaced', 'App\\Listeners\\OnOrderPlaced'],
+            ['App\\Events\\PaymentReceived', 'App\\Listeners\\OnPaymentReceived'],
+        ];
+
+        foreach ($entries as [$event, $listener]) {
+            $this->mutator->mutate($file, new RecipeRegistration(
+                initializer: 'App\\AppInit',
+                method: 'getListeners',
+                interface: 'PHPNomad\\Events\\Interfaces\\HasListeners',
+                type: 'map',
+                key: $event,
+                value: $listener
+            ));
+        }
+
+        $content = file_get_contents($file);
+        $lines = explode("\n", $content);
+
+        // Each entry should be on its own line — no two ::class references on the same line
+        foreach ($lines as $line) {
+            $classCount = substr_count($line, '::class');
+            $this->assertLessThanOrEqual(
+                2,
+                $classCount,
+                "Multiple entries on one line: $line"
+            );
+        }
+    }
+
+    public function testCreatedMethodFormattedProperly(): void
+    {
+        $file = $this->writeInitializer(<<<'PHP'
+<?php
+
+namespace App;
+
+class AppInit
+{
+}
+PHP);
+
+        $this->mutator->mutate($file, new RecipeRegistration(
+            initializer: 'App\\AppInit',
+            method: 'getControllers',
+            interface: 'PHPNomad\\Rest\\Interfaces\\HasControllers',
+            type: 'list',
+            value: 'App\\Rest\\GetUsers'
+        ));
+
+        $this->mutator->mutate($file, new RecipeRegistration(
+            initializer: 'App\\AppInit',
+            method: 'getControllers',
+            interface: 'PHPNomad\\Rest\\Interfaces\\HasControllers',
+            type: 'list',
+            value: 'App\\Rest\\CreateUser'
+        ));
+
+        $content = file_get_contents($file);
+
+        // Method body should be multi-line
+        $this->assertStringContainsString("return [\n", $content);
+        $this->assertStringContainsString("GetUsers::class,\n", $content);
+        $this->assertStringContainsString("CreateUser::class,\n", $content);
+    }
+
     protected function writeInitializer(string $code): string
     {
         $file = $this->tmpDir . '/Initializer.php';
