@@ -43,9 +43,36 @@ class MakeCommand implements Command
             return 1;
         }
 
+        // Walk upward to find the project root (directory containing composer.json)
+        $projectRoot = $this->findProjectRoot($path);
+
+        if ($projectRoot === null) {
+            $this->output->error('Could not find composer.json in ' . $input->getParam('path') . ' or any parent directory.');
+            return 1;
+        }
+
         $vars = $this->parseVars($input);
 
-        return $this->engine->execute($from, $vars, $path, $this->indexer, $this->output);
+        return $this->engine->execute($from, $vars, $projectRoot, $this->indexer, $this->output);
+    }
+
+    protected function findProjectRoot(string $path): ?string
+    {
+        $current = $path;
+
+        while (true) {
+            if (file_exists($current . '/composer.json')) {
+                return $current;
+            }
+
+            $parent = dirname($current);
+
+            if ($parent === $current) {
+                return null;
+            }
+
+            $current = $parent;
+        }
     }
 
     /**

@@ -23,9 +23,9 @@ class RecipeEngine
      */
     public function execute(string $from, array $vars, string $projectPath, ProjectIndexer $indexer, OutputStrategy $output): int
     {
-        // 1. Load recipe
+        // 1. Load recipe (check project-local .phpnomad/recipes/ first)
         try {
-            $recipe = $this->loader->load($from);
+            $recipe = $this->loader->load($from, $projectPath);
         } catch (\Throwable $e) {
             $output->error($e->getMessage());
             return 1;

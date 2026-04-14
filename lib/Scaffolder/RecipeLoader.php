@@ -12,9 +12,9 @@ use RuntimeException;
 
 class RecipeLoader
 {
-    public function load(string $from): Recipe
+    public function load(string $from, ?string $projectPath = null): Recipe
     {
-        $path = $this->resolvePath($from);
+        $path = $this->resolvePath($from, $projectPath);
 
         if (!file_exists($path)) {
             throw new RuntimeException("Recipe not found: $from (looked at $path)");
@@ -35,13 +35,43 @@ class RecipeLoader
         return $this->parse($data);
     }
 
-    protected function resolvePath(string $from): string
+    protected function resolvePath(string $from, ?string $projectPath = null): string
     {
         if (str_contains($from, '/') || str_ends_with($from, '.json')) {
             return $from;
         }
 
+        // Walk upward from projectPath to find .phpnomad/recipes/ (may be above composer.json in multi-package projects)
+        if ($projectPath !== null) {
+            $localPath = $this->findProjectLocalRecipe($from, $projectPath);
+
+            if ($localPath !== null) {
+                return $localPath;
+            }
+        }
+
         return __DIR__ . '/Recipes/' . $from . '.json';
+    }
+
+    protected function findProjectLocalRecipe(string $name, string $startPath): ?string
+    {
+        $current = rtrim($startPath, '/');
+
+        while (true) {
+            $candidate = $current . '/.phpnomad/recipes/' . $name . '.json';
+
+            if (file_exists($candidate)) {
+                return $candidate;
+            }
+
+            $parent = dirname($current);
+
+            if ($parent === $current) {
+                return null;
+            }
+
+            $current = $parent;
+        }
     }
 
     /**

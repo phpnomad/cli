@@ -126,4 +126,117 @@ class RecipeLoaderTest extends TestCase
             unlink($tmpFile);
         }
     }
+
+    public function testProjectLocalRecipeOverridesBuiltin(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
+        $recipesDir = $tmpDir . '/.phpnomad/recipes';
+        mkdir($recipesDir, 0755, true);
+        file_put_contents($recipesDir . '/task.json', json_encode([
+            'name' => 'custom-task',
+            'description' => 'Project-local task recipe',
+            'files' => [
+                [
+                    'path' => 'lib/{{domain}}/Core/Tasks/{{name}}.php',
+                    'template' => 'task',
+                ],
+            ],
+        ]));
+
+        try {
+            $recipe = $this->loader->load('task', $tmpDir);
+
+            $this->assertSame('custom-task', $recipe->name);
+            $this->assertSame('lib/{{domain}}/Core/Tasks/{{name}}.php', $recipe->files[0]->path);
+        } finally {
+            unlink($recipesDir . '/task.json');
+            rmdir($recipesDir);
+            rmdir($tmpDir . '/.phpnomad');
+            rmdir($tmpDir);
+        }
+    }
+
+    public function testFallsBackToBuiltinWhenNoProjectLocal(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
+        mkdir($tmpDir);
+
+        try {
+            $recipe = $this->loader->load('task', $tmpDir);
+
+            $this->assertSame('task', $recipe->name);
+        } finally {
+            rmdir($tmpDir);
+        }
+    }
+
+    public function testProjectLocalRecipeIgnoredForExplicitPaths(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
+        $recipesDir = $tmpDir . '/.phpnomad/recipes';
+        mkdir($recipesDir, 0755, true);
+        file_put_contents($recipesDir . '/task.json', json_encode([
+            'name' => 'custom-task',
+            'files' => [],
+        ]));
+
+        $builtinPath = __DIR__ . '/../../lib/Scaffolder/Recipes/task.json';
+
+        try {
+            // Explicit path should bypass project-local resolution
+            $recipe = $this->loader->load($builtinPath, $tmpDir);
+
+            $this->assertSame('task', $recipe->name);
+        } finally {
+            unlink($recipesDir . '/task.json');
+            rmdir($recipesDir);
+            rmdir($tmpDir . '/.phpnomad');
+            rmdir($tmpDir);
+        }
+    }
+
+    public function testProjectPathNullFallsBackToBuiltin(): void
+    {
+        $recipe = $this->loader->load('task', null);
+
+        $this->assertSame('task', $recipe->name);
+    }
+
+    public function testProjectLocalRecipeFoundFromSubpackageDirectory(): void
+    {
+        // Simulates Siren's multi-package structure:
+        // project-root/.phpnomad/recipes/task.json exists
+        // but --path resolves to project-root/mu-plugins/siren-core/ (the package root)
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
+        $recipesDir = $tmpDir . '/.phpnomad/recipes';
+        $packageDir = $tmpDir . '/mu-plugins/siren-core';
+        mkdir($recipesDir, 0755, true);
+        mkdir($packageDir, 0755, true);
+
+        file_put_contents($recipesDir . '/task.json', json_encode([
+            'name' => 'siren-task',
+            'description' => 'Stack elevator task recipe',
+            'files' => [
+                [
+                    'path' => 'lib/{{domain}}/Core/Tasks/{{name}}.php',
+                    'template' => 'task',
+                ],
+            ],
+        ]));
+
+        try {
+            // Pass the package directory as projectPath — loader should walk up to find .phpnomad/recipes/
+            $recipe = $this->loader->load('task', $packageDir);
+
+            $this->assertSame('siren-task', $recipe->name);
+            $this->assertSame('lib/{{domain}}/Core/Tasks/{{name}}.php', $recipe->files[0]->path);
+        } finally {
+            unlink($recipesDir . '/task.json');
+            rmdir($recipesDir);
+            rmdir($tmpDir . '/.phpnomad');
+            rmdir($packageDir);
+            rmdir($tmpDir . '/mu-plugins');
+            rmdir($tmpDir);
+        }
+    }
 }
