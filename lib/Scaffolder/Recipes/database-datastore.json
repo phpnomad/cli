@@ -1,0 +1,63 @@
+{
+    "name": "database-datastore",
+    "description": "Creates a full database-backed datastore: interface, handler interface, implementation, model, adapter, table, and database handler",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Entity name (e.g. Payout)"
+        },
+        "tableName": {
+            "type": "string",
+            "description": "Database table name (e.g. payouts)"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register DI bindings in"
+        }
+    },
+    "requires": [
+        {"type": "binding", "value": "DatabaseStrategy"}
+    ],
+    "files": [],
+    "registrations": [],
+    "recipes": [
+        {
+            "recipe": "model",
+            "vars": {
+                "name": "{{name}}"
+            }
+        },
+        {
+            "recipe": "model-adapter",
+            "vars": {
+                "name": "{{name}}Adapter",
+                "model": "{{rootNamespace}}\\Models\\{{name}}"
+            }
+        },
+        {
+            "recipe": "table",
+            "vars": {
+                "name": "{{name}}sTable",
+                "tableName": "{{tableName}}"
+            }
+        },
+        {
+            "recipe": "datastore",
+            "vars": {
+                "name": "{{name}}",
+                "initializer": "{{initializer}}"
+            }
+        },
+        {
+            "recipe": "database-handler",
+            "vars": {
+                "name": "{{name}}",
+                "handlerInterface": "{{rootNamespace}}\\Datastores\\{{name}}\\Interfaces\\{{name}}DatastoreHandler",
+                "model": "{{rootNamespace}}\\Models\\{{name}}",
+                "modelAdapter": "{{rootNamespace}}\\Models\\Adapters\\{{name}}Adapter",
+                "table": "{{rootNamespace}}\\Tables\\{{name}}sTable",
+                "initializer": "{{initializer}}"
+            }
+        }
+    ]
+}

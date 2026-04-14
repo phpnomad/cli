@@ -9,6 +9,7 @@ final class Recipe
      * @param RecipeRequirement[] $requires
      * @param RecipeFile[] $files
      * @param RecipeRegistration[] $registrations
+     * @param RecipeReference[] $recipes Child recipes to execute (recipe stacking)
      */
     public function __construct(
         public readonly string $name,
@@ -16,7 +17,8 @@ final class Recipe
         public readonly array $vars = [],
         public readonly array $requires = [],
         public readonly array $files = [],
-        public readonly array $registrations = []
+        public readonly array $registrations = [],
+        public readonly array $recipes = []
     ) {
     }
 }

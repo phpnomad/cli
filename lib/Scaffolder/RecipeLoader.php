@@ -5,6 +5,7 @@ namespace PHPNomad\Cli\Scaffolder;
 use PHPNomad\Cli\Scaffolder\Models\Recipe;
 use PHPNomad\Cli\Scaffolder\Models\RecipeFile;
 use PHPNomad\Cli\Scaffolder\Models\RecipeRegistration;
+use PHPNomad\Cli\Scaffolder\Models\RecipeReference;
 use PHPNomad\Cli\Scaffolder\Models\RecipeRequirement;
 use PHPNomad\Cli\Scaffolder\Models\RecipeVar;
 use RuntimeException;
@@ -96,13 +97,25 @@ class RecipeLoader
             );
         }
 
+        $recipes = [];
+        foreach ($data['recipes'] ?? [] as $ref) {
+            if (!isset($ref['recipe'])) {
+                throw new RuntimeException('Each recipe reference must have a "recipe" field');
+            }
+            $recipes[] = new RecipeReference(
+                recipe: $ref['recipe'],
+                vars: $ref['vars'] ?? []
+            );
+        }
+
         return new Recipe(
             name: $data['name'],
             description: $data['description'] ?? '',
             vars: $vars,
             requires: $requires,
             files: $files,
-            registrations: $registrations
+            registrations: $registrations,
+            recipes: $recipes
         );
     }
 }

@@ -78,6 +78,20 @@ class NamespaceResolver
     }
 
     /**
+     * Get the root namespace from the first PSR-4 autoload entry.
+     */
+    public function resolveRoot(string $projectPath): string
+    {
+        $psr4 = $this->loadPsr4Mapping($projectPath);
+
+        foreach ($psr4 as $namespace => $dirs) {
+            return rtrim($namespace, '\\');
+        }
+
+        throw new RuntimeException("No PSR-4 autoload mapping found in: $projectPath/composer.json");
+    }
+
+    /**
      * @return array<string, string|string[]>
      */
     protected function loadPsr4Mapping(string $projectPath): array
