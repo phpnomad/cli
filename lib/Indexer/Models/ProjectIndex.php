@@ -19,6 +19,9 @@ final class ProjectIndex
      * @param array<string, ResolvedFacade> $resolvedFacades Keyed by FQCN
      * @param ResolvedTaskHandler[] $resolvedTaskHandlers
      * @param array<string, ResolvedMutation> $resolvedMutations Keyed by FQCN
+     * @param array<string, GraphNode> $dependencyMap Keyed by FQCN
+     * @param array<string, GraphNode> $dependentsMap Keyed by FQCN
+     * @param OrphanEntry[] $orphans
      */
     public function __construct(
         public readonly string $projectPath,
@@ -34,7 +37,10 @@ final class ProjectIndex
         public readonly array $resolvedGraphQLTypes = [],
         public readonly array $resolvedFacades = [],
         public readonly array $resolvedTaskHandlers = [],
-        public readonly array $resolvedMutations = []
+        public readonly array $resolvedMutations = [],
+        public readonly array $dependencyMap = [],
+        public readonly array $dependentsMap = [],
+        public readonly array $orphans = []
     ) {
     }
 
@@ -100,6 +106,9 @@ final class ProjectIndex
                 'resolvedFacades' => count($this->resolvedFacades),
                 'resolvedTaskHandlers' => count($this->resolvedTaskHandlers),
                 'resolvedMutations' => count($this->resolvedMutations),
+                'dependencyMapNodes' => count($this->dependencyMap),
+                'dependentsMapNodes' => count($this->dependentsMap),
+                'orphans' => count($this->orphans),
             ],
         ];
     }

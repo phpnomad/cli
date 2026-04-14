@@ -29,6 +29,9 @@ phpnomad inspect:routes --path=.  # Route table
 | `task-handlers.jsonl` | Task handler mappings | handlerFqcn, taskClass, taskId | `cat task-handlers.jsonl` |
 | `graphql-types.jsonl` | GraphQL type definitions | fqcn, sdl, resolvers | `cat graphql-types.jsonl` |
 | `mutations.jsonl` | Mutation handlers | fqcn, actions, usesAdapter | `cat mutations.jsonl` |
+| `dependency-map.jsonl` | What each class depends on | fqcn, edges[{type, target}] | `grep "PayoutService" dependency-map.jsonl` |
+| `dependents-map.jsonl` | What depends on each class | fqcn, edges[{type, source}] | `grep "PayoutDatastore" dependents-map.jsonl` |
+| `orphans.jsonl` | Classes with no relationships | fqcn, file | `cat orphans.jsonl` |
 
 ## Querying
 
@@ -50,14 +53,26 @@ grep '"tableName":"payouts"' .phpnomad/tables.jsonl
 # Find what interface a facade proxies
 grep "Transactions" .phpnomad/facades.jsonl
 
+# Find everything that depends on an interface (reverse lookup)
+grep "PayoutDatastore" .phpnomad/dependents-map.jsonl
+
+# Find what a service depends on
+grep "PayoutService" .phpnomad/dependency-map.jsonl
+
+# Find unreferenced classes (candidates for removal)
+cat .phpnomad/orphans.jsonl
+
 # Full project context for AI consumption
 phpnomad context --path=.
 ```
 ## Index Summary
 
-- **Classes**: 54
+- **Classes**: 60
 - **Applications**: 1
 - **Initializers**: 1
 - **Bindings**: 6
 - **Commands**: 4
 - **Dependencies**: 7
+- **Dependency Map**: 15
+- **Dependents Map**: 45
+- **Orphans**: 21

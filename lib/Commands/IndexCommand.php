@@ -43,6 +43,7 @@ class IndexCommand implements Command
         $this->output->writeln('  controllers.jsonl, commands.jsonl, dependencies.jsonl,');
         $this->output->writeln('  tables.jsonl, events.jsonl, graphql-types.jsonl,');
         $this->output->writeln('  facades.jsonl, task-handlers.jsonl, mutations.jsonl,');
+        $this->output->writeln('  dependency-map.jsonl, dependents-map.jsonl, orphans.jsonl,');
         $this->output->writeln('  phpnomad-cli.md');
 
         $this->output->newline();
@@ -60,6 +61,9 @@ class IndexCommand implements Command
         $this->output->writeln('  Task handlers:  ' . count($index->resolvedTaskHandlers));
         $this->output->writeln('  Mutations:      ' . count($index->resolvedMutations));
         $this->output->writeln('  Dependencies:   ' . count($index->dependencyTrees));
+        $this->output->writeln('  Dep map:        ' . count($index->dependencyMap));
+        $this->output->writeln('  Dependents map: ' . count($index->dependentsMap));
+        $this->output->writeln('  Orphans:        ' . count($index->orphans));
         $this->output->writeln('  Classes:        ' . count($index->classes));
 
         return 0;

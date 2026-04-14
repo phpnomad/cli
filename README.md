@@ -20,6 +20,7 @@ PHPNomad CLI scans a target project directory, walks the `Application -> Bootstr
 10. **FacadeAnalyzer** resolves facade classes to extract which interface each proxies via `abstractInstance()`.
 11. **TaskHandlerAnalyzer** links task handler classes to their task classes and extracts the task's runtime ID.
 12. **MutationAnalyzer** resolves mutation handlers, detecting adapter trait usage and action mappings.
+13. **DependencyGraphBuilder** builds a unified relationship graph from all indexed data and inverts it for reverse lookups. Identifies orphan classes with no relationships.
 
 ### Output format
 
@@ -27,22 +28,27 @@ The index is written as JSONL files in `.phpnomad/` for token-efficient consumpt
 
 ```
 .phpnomad/
-  meta.json            # Summary counts
-  classes.jsonl        # One class per line (FQCN, interfaces, traits, constructor params)
-  initializers.jsonl   # One initializer per line (bindings, controllers, listeners, commands)
-  applications.jsonl   # One application per line (boot sequence, pre/post bindings)
-  controllers.jsonl    # One resolved controller per line (endpoint, method, capabilities)
-  commands.jsonl       # One resolved command per line (signature, description)
-  dependencies.jsonl   # One dependency tree per line (recursive resolution chain)
-  tables.jsonl         # One table per line (name, columns, types, foreign keys)
-  events.jsonl         # One event per line (event ID, payload properties)
-  graphql-types.jsonl  # One GraphQL type per line (SDL, resolvers)
-  facades.jsonl        # One facade per line (proxied interface)
-  task-handlers.jsonl  # One handler per line (task class, task ID)
-  mutations.jsonl      # One mutation handler per line (actions, adapter info)
+  meta.json              # Summary counts
+  classes.jsonl          # One class per line (FQCN, interfaces, traits, constructor params)
+  initializers.jsonl     # One initializer per line (bindings, controllers, listeners, commands)
+  applications.jsonl     # One application per line (boot sequence, pre/post bindings)
+  controllers.jsonl      # One resolved controller per line (endpoint, method, capabilities)
+  commands.jsonl         # One resolved command per line (signature, description)
+  dependencies.jsonl     # One dependency tree per line (recursive resolution chain)
+  tables.jsonl           # One table per line (name, columns, types, foreign keys)
+  events.jsonl           # One event per line (event ID, payload properties)
+  graphql-types.jsonl    # One GraphQL type per line (SDL, resolvers)
+  facades.jsonl          # One facade per line (proxied interface)
+  task-handlers.jsonl    # One handler per line (task class, task ID)
+  mutations.jsonl        # One mutation handler per line (actions, adapter info)
+  dependency-map.jsonl   # What each class depends on (all relationship types)
+  dependents-map.jsonl   # What depends on each class (reverse lookup)
+  orphans.jsonl          # Classes with no relationships in either direction
 ```
 
-Each line is a self-contained JSON object. An AI agent can `grep "PayoutDatastore" .phpnomad/dependencies.jsonl` to find a specific dependency chain without loading 1000+ records.
+Each line is a self-contained JSON object. An AI agent can `grep "PayoutDatastore" .phpnomad/dependents-map.jsonl` to find everything that depends on an interface without reading a single source file.
+
+The **dependency-map** and **dependents-map** are a unified relationship graph covering all edge types: constructor injection, interface implementation, inheritance, trait usage, event listeners, task handlers, facade proxies, DI bindings, and mutation adapters. The dependency-map shows outbound edges (what does X depend on?), the dependents-map shows inbound edges (what depends on X?). The **orphans** file lists classes with no relationships in either direction, flagging candidates for removal.
 
 ## Commands
 
@@ -149,6 +155,28 @@ ln -s /path/to/phpnomad/cli/bin/phpnomad ~/.local/bin/phpnomad
 - PHP 8.2+
 - nikic/php-parser ^5.0
 - Target project must use the PHPNomad Bootstrapper pattern
+
+## Token efficiency
+
+The index exists to save tokens. Instead of reading source files and grepping across the codebase, an AI agent can answer structural questions with a single grep against a JSONL file.
+
+Benchmarked against a real project (Siren, 1,019 classes, 69 events, 27 tables):
+
+| Query | Index | Raw source | Savings |
+|---|---|---|---|
+| What does `AllocateDistribution` depend on? | 1.1 KB | 75 KB | **67x** |
+| What injects `EventStrategy`? | 7 KB | 394 KB | **54x** |
+| What implements `DataModel`? (36 classes) | 3 KB | 47 KB | **14x** |
+| Boot sequence + initializer contributions | 10 KB | 315 KB | **32x** |
+| All DI bindings with resolution chains | 7 KB | 93 KB | **13x** |
+| All task handlers with task mappings | 0.3 KB | 37 KB | **109x** |
+| All events with IDs (69 events) | 23 KB | 73 KB | **3x** |
+| All table schemas (27 tables) | 19 KB | 42 KB | **2x** |
+| Unreferenced classes (50 orphans) | 6 KB | N/A | impossible without index |
+
+"Index" is the bytes read from a single grep or cat on the relevant JSONL file. "Raw source" is the bytes an agent would need to read from PHP files to derive the same answer. At ~4 bytes per token, the reverse lookup on `EventStrategy` drops from ~98,000 tokens to ~1,750 tokens.
+
+The savings are largest for reverse lookups (what depends on X?) because without the index, the agent must grep and read every file in the project. Forward lookups (what does X depend on?) are still faster because the index pre-resolves DI bindings that would otherwise require tracing through multiple initializer files.
 
 ## Design philosophy
 

@@ -3,9 +3,11 @@
 namespace PHPNomad\Cli\Indexer;
 
 use PHPNomad\Cli\Indexer\Adapters\DependencyNodeAdapter;
+use PHPNomad\Cli\Indexer\Adapters\GraphNodeAdapter;
 use PHPNomad\Cli\Indexer\Adapters\IndexedApplicationAdapter;
 use PHPNomad\Cli\Indexer\Adapters\IndexedClassAdapter;
 use PHPNomad\Cli\Indexer\Adapters\IndexedInitializerAdapter;
+use PHPNomad\Cli\Indexer\Adapters\OrphanEntryAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedCommandAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedControllerAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedEventAdapter;
@@ -26,6 +28,7 @@ class ProjectIndexer
         protected ControllerAnalyzer $controllerAnalyzer,
         protected CommandAnalyzer $commandAnalyzer,
         protected DependencyResolver $dependencyResolver,
+        protected DependencyGraphBuilder $graphBuilder,
         protected TableAnalyzer $tableAnalyzer,
         protected EventAnalyzer $eventAnalyzer,
         protected GraphQLTypeAnalyzer $graphQLTypeAnalyzer,
@@ -38,6 +41,8 @@ class ProjectIndexer
         protected ResolvedControllerAdapter $controllerAdapter,
         protected ResolvedCommandAdapter $commandAdapter,
         protected DependencyNodeAdapter $dependencyNodeAdapter,
+        protected GraphNodeAdapter $graphNodeAdapter,
+        protected OrphanEntryAdapter $orphanAdapter,
         protected ResolvedTableAdapter $tableAdapter,
         protected ResolvedEventAdapter $eventAdapter,
         protected ResolvedGraphQLTypeAdapter $graphQLTypeAdapter,
@@ -303,7 +308,7 @@ class ProjectIndexer
         $dependencyTrees = $this->dependencyResolver->resolve($index, $path);
         $output->writeln('  Resolved ' . count($dependencyTrees) . ' dependency trees');
 
-        return new ProjectIndex(
+        $indexWithDeps = new ProjectIndex(
             $path,
             date('c'),
             $classes,
@@ -318,6 +323,33 @@ class ProjectIndexer
             $resolvedFacades,
             $resolvedTaskHandlers,
             $resolvedMutations
+        );
+
+        // Build dependency graph
+        $output->info('Building dependency graph...');
+        $graph = $this->graphBuilder->build($indexWithDeps);
+        $output->writeln('  Dependency map:  ' . count($graph['dependencyMap']) . ' nodes');
+        $output->writeln('  Dependents map:  ' . count($graph['dependentsMap']) . ' nodes');
+        $output->writeln('  Orphans:         ' . count($graph['orphans']));
+
+        return new ProjectIndex(
+            $path,
+            date('c'),
+            $classes,
+            $applications,
+            $initializers,
+            $resolvedControllers,
+            $resolvedCommands,
+            $dependencyTrees,
+            $resolvedTables,
+            $resolvedEvents,
+            $resolvedGraphQLTypes,
+            $resolvedFacades,
+            $resolvedTaskHandlers,
+            $resolvedMutations,
+            $graph['dependencyMap'],
+            $graph['dependentsMap'],
+            $graph['orphans']
         );
     }
 
@@ -346,6 +378,9 @@ class ProjectIndexer
         $this->writeJsonlFile($dir . '/facades.jsonl', $index->resolvedFacades, fn($f) => $this->facadeAdapter->toArray($f));
         $this->writeJsonlFile($dir . '/task-handlers.jsonl', $index->resolvedTaskHandlers, fn($h) => $this->taskHandlerAdapter->toArray($h));
         $this->writeJsonlFile($dir . '/mutations.jsonl', $index->resolvedMutations, fn($m) => $this->mutationAdapter->toArray($m));
+        $this->writeJsonlFile($dir . '/dependency-map.jsonl', $index->dependencyMap, fn($n) => $this->graphNodeAdapter->toArray($n, 'target'));
+        $this->writeJsonlFile($dir . '/dependents-map.jsonl', $index->dependentsMap, fn($n) => $this->graphNodeAdapter->toArray($n, 'source'));
+        $this->writeJsonlFile($dir . '/orphans.jsonl', $index->orphans, fn($o) => $this->orphanAdapter->toArray($o));
 
         file_put_contents($dir . '/phpnomad-cli.md', $this->generateCliReference($index));
 
@@ -384,6 +419,9 @@ class ProjectIndexer
         $resolvedFacades = $this->readJsonlFile($dir . '/facades.jsonl', fn($d) => $this->facadeAdapter->fromArray($d), 'fqcn');
         $resolvedTaskHandlers = $this->readJsonlFile($dir . '/task-handlers.jsonl', fn($d) => $this->taskHandlerAdapter->fromArray($d));
         $resolvedMutations = $this->readJsonlFile($dir . '/mutations.jsonl', fn($d) => $this->mutationAdapter->fromArray($d), 'fqcn');
+        $dependencyMap = $this->readJsonlFile($dir . '/dependency-map.jsonl', fn($d) => $this->graphNodeAdapter->fromArray($d, 'target'), 'fqcn');
+        $dependentsMap = $this->readJsonlFile($dir . '/dependents-map.jsonl', fn($d) => $this->graphNodeAdapter->fromArray($d, 'source'), 'fqcn');
+        $orphans = $this->readJsonlFile($dir . '/orphans.jsonl', fn($d) => $this->orphanAdapter->fromArray($d));
 
         return new ProjectIndex(
             $meta['projectPath'] ?? '',
@@ -399,7 +437,10 @@ class ProjectIndexer
             $resolvedGraphQLTypes,
             $resolvedFacades,
             $resolvedTaskHandlers,
-            $resolvedMutations
+            $resolvedMutations,
+            $dependencyMap,
+            $dependentsMap,
+            $orphans
         );
     }
 
@@ -468,6 +509,16 @@ class ProjectIndexer
             $mutations[$fqcn] = $this->mutationAdapter->toArray($mutation);
         }
 
+        $dependencyMap = [];
+        foreach ($index->dependencyMap as $fqcn => $node) {
+            $dependencyMap[$fqcn] = $this->graphNodeAdapter->toArray($node, 'target');
+        }
+
+        $dependentsMap = [];
+        foreach ($index->dependentsMap as $fqcn => $node) {
+            $dependentsMap[$fqcn] = $this->graphNodeAdapter->toArray($node, 'source');
+        }
+
         return [
             'projectPath' => $index->projectPath,
             'indexedAt' => $index->indexedAt,
@@ -483,6 +534,9 @@ class ProjectIndexer
             'resolvedFacades' => $facades,
             'resolvedTaskHandlers' => array_map(fn($h) => $this->taskHandlerAdapter->toArray($h), $index->resolvedTaskHandlers),
             'resolvedMutations' => $mutations,
+            'dependencyMap' => $dependencyMap,
+            'dependentsMap' => $dependentsMap,
+            'orphans' => array_map(fn($o) => $this->orphanAdapter->toArray($o), $index->orphans),
         ];
     }
 
@@ -575,6 +629,9 @@ phpnomad inspect:routes --path=.  # Route table
 | `task-handlers.jsonl` | Task handler mappings | handlerFqcn, taskClass, taskId | `cat task-handlers.jsonl` |
 | `graphql-types.jsonl` | GraphQL type definitions | fqcn, sdl, resolvers | `cat graphql-types.jsonl` |
 | `mutations.jsonl` | Mutation handlers | fqcn, actions, usesAdapter | `cat mutations.jsonl` |
+| `dependency-map.jsonl` | What each class depends on | fqcn, edges[{type, target}] | `grep "PayoutService" dependency-map.jsonl` |
+| `dependents-map.jsonl` | What depends on each class | fqcn, edges[{type, source}] | `grep "PayoutDatastore" dependents-map.jsonl` |
+| `orphans.jsonl` | Classes with no relationships | fqcn, file | `cat orphans.jsonl` |
 
 ## Querying
 
@@ -595,6 +652,15 @@ grep '"tableName":"payouts"' .phpnomad/tables.jsonl
 
 # Find what interface a facade proxies
 grep "Transactions" .phpnomad/facades.jsonl
+
+# Find everything that depends on an interface (reverse lookup)
+grep "PayoutDatastore" .phpnomad/dependents-map.jsonl
+
+# Find what a service depends on
+grep "PayoutService" .phpnomad/dependency-map.jsonl
+
+# Find unreferenced classes (candidates for removal)
+cat .phpnomad/orphans.jsonl
 
 # Full project context for AI consumption
 phpnomad context --path=.
@@ -617,6 +683,9 @@ MD;
             ['Facades', $counts['resolvedFacades']],
             ['Task Handlers', $counts['resolvedTaskHandlers']],
             ['Dependencies', $counts['dependencyTrees']],
+            ['Dependency Map', $counts['dependencyMapNodes']],
+            ['Dependents Map', $counts['dependentsMapNodes']],
+            ['Orphans', $counts['orphans']],
         ];
 
         foreach ($summaryLines as [$label, $count]) {
