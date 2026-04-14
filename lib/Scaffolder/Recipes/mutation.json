@@ -1,0 +1,35 @@
+{
+    "name": "mutation",
+    "description": "Creates a mutation handler and registers it in an initializer",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Mutation handler class name (e.g. CreateUserMutation)"
+        },
+        "action": {
+            "type": "string",
+            "description": "Action name this mutation handles (e.g. create)"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Mutations/{{name}}.php",
+            "template": "mutation"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getMutations",
+            "interface": "PHPNomad\\Mutator\\Interfaces\\HasMutations",
+            "type": "map",
+            "key": "{{action}}",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}

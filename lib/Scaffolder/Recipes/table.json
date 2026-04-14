@@ -1,0 +1,22 @@
+{
+    "name": "table",
+    "description": "Creates a database table definition class",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Table class name (e.g. UsersTable)"
+        },
+        "tableName": {
+            "type": "string",
+            "description": "Database table name (e.g. users)"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Tables/{{name}}.php",
+            "template": "table"
+        }
+    ],
+    "registrations": []
+}

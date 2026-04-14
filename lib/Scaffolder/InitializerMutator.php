@@ -166,15 +166,15 @@ class InitializerMutator
                 if ($item === null || $item->key === null) {
                     continue;
                 }
-                $keyFqcn = $this->extractClassConstFqcn($item->key);
+                $keyVal = $this->extractKeyValue($item->key);
                 $valueFqcn = $this->extractClassConstFqcn($item->value);
 
-                if ($keyFqcn === $registration->key && $valueFqcn === $registration->value) {
+                if ($keyVal === $registration->key && $valueFqcn === $registration->value) {
                     return true;
                 }
 
                 // Check for duplicate in nested array values
-                if ($keyFqcn === $registration->key && $item->value instanceof Expr\Array_) {
+                if ($keyVal === $registration->key && $item->value instanceof Expr\Array_) {
                     foreach ($item->value->items as $subItem) {
                         if ($subItem !== null && $this->extractClassConstFqcn($subItem->value) === $registration->value) {
                             return true;
@@ -204,6 +204,44 @@ class InitializerMutator
         return null;
     }
 
+    /**
+     * Extract either a ::class FQCN or a string literal value from an expression.
+     */
+    protected function extractKeyValue(Node\Expr $expr): ?string
+    {
+        $fqcn = $this->extractClassConstFqcn($expr);
+
+        if ($fqcn !== null) {
+            return $fqcn;
+        }
+
+        if ($expr instanceof Node\Scalar\String_) {
+            return $expr->value;
+        }
+
+        return null;
+    }
+
+    /**
+     * Determine if a value looks like a FQCN (contains backslash) or a plain string.
+     */
+    protected function isFqcn(string $value): bool
+    {
+        return str_contains($value, '\\');
+    }
+
+    /**
+     * Create either a ::class constant fetch or a string literal node.
+     */
+    protected function makeKeyNode(string $value): Node\Expr
+    {
+        if ($this->isFqcn($value)) {
+            return $this->makeClassConstFetch($value);
+        }
+
+        return new Node\Scalar\String_($value);
+    }
+
     protected function appendListEntry(Expr\Array_ $array, string $fqcn): void
     {
         $array->items[] = new Expr\ArrayItem(
@@ -219,9 +257,9 @@ class InitializerMutator
                 continue;
             }
 
-            $keyFqcn = $this->extractClassConstFqcn($item->key);
+            $keyVal = $this->extractKeyValue($item->key);
 
-            if ($keyFqcn === $key) {
+            if ($keyVal === $key) {
                 // Key exists — convert to array if needed and append
                 if ($item->value instanceof Expr\Array_) {
                     $item->value->items[] = new Expr\ArrayItem(
@@ -242,7 +280,7 @@ class InitializerMutator
         // Key doesn't exist — add new entry
         $array->items[] = new Expr\ArrayItem(
             $this->makeClassConstFetch($value),
-            $this->makeClassConstFetch($key)
+            $this->makeKeyNode($key)
         );
     }
 
@@ -276,7 +314,7 @@ class InitializerMutator
             $items = [
                 new Expr\ArrayItem(
                     $this->makeClassConstFetch($registration->value ?? ''),
-                    $this->makeClassConstFetch($registration->key ?? '')
+                    $this->makeKeyNode($registration->key ?? '')
                 ),
             ];
         }

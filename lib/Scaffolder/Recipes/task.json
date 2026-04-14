@@ -1,0 +1,22 @@
+{
+    "name": "task",
+    "description": "Creates a task class with a unique runtime ID",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Task class name (e.g. SendEmail)"
+        },
+        "taskId": {
+            "type": "string",
+            "description": "Unique task identifier (e.g. email.send)"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Tasks/{{name}}.php",
+            "template": "task"
+        }
+    ],
+    "registrations": []
+}

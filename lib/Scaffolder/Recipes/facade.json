@@ -1,0 +1,34 @@
+{
+    "name": "facade",
+    "description": "Creates a facade class that proxies an interface",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Facade class name (e.g. Transactions)"
+        },
+        "interface": {
+            "type": "string",
+            "description": "FQCN of the interface to proxy"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/Facades/{{name}}.php",
+            "template": "facade"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getFacades",
+            "interface": "PHPNomad\\Facade\\Interfaces\\HasFacades",
+            "type": "list",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}

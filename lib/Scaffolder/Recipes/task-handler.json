@@ -1,0 +1,35 @@
+{
+    "name": "task-handler",
+    "description": "Creates a task handler and registers it in an initializer",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Handler class name (e.g. SendEmailHandler)"
+        },
+        "task": {
+            "type": "string",
+            "description": "FQCN of the task class to handle"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/TaskHandlers/{{name}}.php",
+            "template": "task-handler"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getTaskHandlers",
+            "interface": "PHPNomad\\Tasks\\Interfaces\\HasTaskHandlers",
+            "type": "map",
+            "key": "{{task}}",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}

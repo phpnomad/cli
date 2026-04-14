@@ -1,0 +1,34 @@
+{
+    "name": "graphql-type",
+    "description": "Creates a GraphQL type definition and registers it in an initializer",
+    "vars": {
+        "name": {
+            "type": "string",
+            "description": "Type definition class name (e.g. UserType)"
+        },
+        "typeName": {
+            "type": "string",
+            "description": "GraphQL type name (e.g. User)"
+        },
+        "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer to register in"
+        }
+    },
+    "requires": [],
+    "files": [
+        {
+            "path": "lib/GraphQL/Types/{{name}}.php",
+            "template": "graphql-type"
+        }
+    ],
+    "registrations": [
+        {
+            "initializer": "{{initializer}}",
+            "method": "getTypeDefinitions",
+            "interface": "PHPNomad\\GraphQL\\Interfaces\\HasTypeDefinitions",
+            "type": "list",
+            "value": "{{namespace}}\\{{name}}"
+        }
+    ]
+}
