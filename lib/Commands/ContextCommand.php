@@ -4,6 +4,7 @@ namespace PHPNomad\Cli\Commands;
 
 use PHPNomad\Cli\Indexer\ContextRenderer;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
+use PHPNomad\Cli\Support\NullOutputStrategy;
 use PHPNomad\Console\Interfaces\Command;
 use PHPNomad\Console\Interfaces\Input;
 use PHPNomad\Console\Interfaces\OutputStrategy;
@@ -47,7 +48,7 @@ class ContextCommand implements Command
         }
 
         if ($index === null) {
-            $index = $this->indexer->index($path, $this->output);
+            $index = $this->indexer->index($path, new NullOutputStrategy());
         }
 
         $sections = null;

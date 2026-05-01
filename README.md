@@ -62,6 +62,19 @@ phpnomad index --path=/path/to/project
 
 Produces the `.phpnomad/` directory with all JSONL files and reports summary stats.
 
+For AI agents or automation that only need the result and counts:
+
+```bash
+phpnomad index --path=/path/to/project --format=summary
+```
+
+Summary output uses stable line prefixes:
+
+```
+index: written=/path/to/project/.phpnomad/
+summary: applications=1 initializers=12 bindings=34 controllers=8 commands=3 tables=4 events=9 listeners=20 graphqlTypes=0 facades=5 taskHandlers=0 mutations=0 dependencies=18 dependencyMap=40 dependentsMap=72 orphans=6 classes=120
+```
+
 ### `phpnomad inspect:di`
 
 Display the boot sequence and dependency injection bindings.
@@ -154,6 +167,35 @@ The `--from` flag accepts a built-in recipe name (`listener`, `event`, `command`
 Each recipe generates the PHP file(s) with proper namespace, interface implementations, and TODO markers, then automatically registers the new class in the specified initializer via AST mutation. If the initializer doesn't have the required method (e.g. `getListeners()`), the scaffolder creates it and adds the corresponding `Has*` interface.
 
 Custom recipes can create multiple files and registrations in a single spec, enabling full feature scaffolding (e.g., a datastore with its interface, CRUD controllers, events, and listeners) from one command.
+
+Invalid vars JSON fails before any files are written:
+
+```bash
+phpnomad make --from=listener '{invalid'
+# Invalid vars JSON: Syntax error
+```
+
+### `phpnomad rtk`
+
+Install bundled RTK filters so AI agents can run PHPNomad through `rtk` and receive compact command output.
+
+```bash
+phpnomad rtk --project --path=/path/to/project
+phpnomad rtk --global
+```
+
+Project install writes or updates:
+
+```
+/path/to/project/.rtk/filters.toml
+```
+
+After project install, run `rtk trust` from the project root. The filters cover `phpnomad index`, `phpnomad make`, and `phpnomad rtk` output. For best agent behavior, invoke PHPNomad through RTK:
+
+```bash
+rtk vendor/bin/phpnomad index --path=. --format=summary
+rtk vendor/bin/phpnomad make --from=listener '{"name":"SendWelcomeEmail","event":"App\\Events\\UserCreated","initializer":"App\\AppInit"}'
+```
 
 ## Installation
 

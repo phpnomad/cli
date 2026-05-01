@@ -1,3 +1,10 @@
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\RecipeRegistration","file":"lib/Scaffolder/Models/RecipeRegistration.php"}
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\RecipeVar","file":"lib/Scaffolder/Models/RecipeVar.php"}
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\RecipeFile","file":"lib/Scaffolder/Models/RecipeFile.php"}
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\RecipeRequirement","file":"lib/Scaffolder/Models/RecipeRequirement.php"}
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\Recipe","file":"lib/Scaffolder/Models/Recipe.php"}
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\RecipeReference","file":"lib/Scaffolder/Models/RecipeReference.php"}
+{"fqcn":"PHPNomad\\Cli\\Scaffolder\\Models\\MutationResult","file":"lib/Scaffolder/Models/MutationResult.php"}
 {"fqcn":"PHPNomad\\Cli\\Application","file":"lib/Application.php"}
 {"fqcn":"PHPNomad\\Cli\\Indexer\\Models\\ResolvedTable","file":"lib/Indexer/Models/ResolvedTable.php"}
 {"fqcn":"PHPNomad\\Cli\\Indexer\\Models\\IndexedInitializer","file":"lib/Indexer/Models/IndexedInitializer.php"}

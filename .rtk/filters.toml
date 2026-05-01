@@ -1,0 +1,89 @@
+schema_version = 1
+
+[filters.phpnomad-index]
+description = "Compact PHPNomad index output while preserving summary counts and warnings"
+match_command = "^(?:php\\s+)?(?:\\S*/)?phpnomad\\s+index\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "^index:",
+  "^summary:",
+  "^Index written to ",
+  "^Summary$",
+  "^\\s+(Applications|Initializers|Bindings|Controllers|Commands|Tables|Events|Listeners|GraphQL types|Facades|Task handlers|Mutations|Dependencies|Dep map|Dependents map|Orphans|Classes):\\s+\\d+\\s*$",
+  "^\\s*(Path does not exist|Could not resolve|ERROR|Error|Warning|warning|error)",
+]
+max_lines = 80
+on_empty = "phpnomad index: ok"
+
+[[tests.phpnomad-index]]
+name = "keeps index summary"
+input = """
+Scanning project files...
+  Found 75 classes
+Walking boot sequences...
+  Found 1 application(s)
+Index written to /tmp/project/.phpnomad/
+Summary
+  Applications:   1
+  Classes:        75
+"""
+expected = """
+Index written to /tmp/project/.phpnomad/
+Summary
+  Applications:   1
+  Classes:        75
+"""
+
+[filters.phpnomad-make]
+description = "Compact PHPNomad scaffolder output while preserving generated files, registrations, and errors"
+match_command = "^(?:php\\s+)?(?:\\S*/)?phpnomad\\s+make\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "^Recipe:",
+  "^recipe:",
+  "^\\s+(Created|Registered|Please add manually|Initializer not found):",
+  "^summary:",
+  "^Done:",
+  "^\\s*- ",
+  "^\\s*(The --from option is required|Path does not exist|Preflight validation failed|Template error|Could not resolve namespace|Recipe not found|Invalid vars JSON|ERROR|Error|Warning|warning|error)",
+]
+max_lines = 100
+on_empty = "phpnomad make: ok"
+
+[[tests.phpnomad-make]]
+name = "keeps scaffolder actions"
+input = """
+Recipe: listener
+  Adds a listener
+  Created: lib/Listeners/Foo.php
+  Registered: getListeners() in App\\Init
+Done: 1 file(s) created, 1 registration(s) performed.
+"""
+expected = """
+Recipe: listener
+  Created: lib/Listeners/Foo.php
+  Registered: getListeners() in App\\Init
+Done: 1 file(s) created, 1 registration(s) performed.
+"""
+
+[filters.phpnomad-rtk]
+description = "Compact PHPNomad RTK installer output"
+match_command = "^(?:php\\s+)?(?:\\S*/)?phpnomad\\s+rtk\\b"
+strip_ansi = true
+keep_lines_matching = [
+  "^rtk:",
+  "^\\s*(Path does not exist|Choose either|Bundled RTK|Could not|ERROR|Error|Warning|warning|error)",
+]
+max_lines = 20
+on_empty = "phpnomad rtk: ok"
+
+[[tests.phpnomad-rtk]]
+name = "keeps install confirmation"
+input = """
+rtk: installed project filters=/tmp/project/.rtk/filters.toml
+rtk: run `rtk trust` from the project root before project-local filters apply
+"""
+expected = """
+rtk: installed project filters=/tmp/project/.rtk/filters.toml
+rtk: run `rtk trust` from the project root before project-local filters apply
+"""

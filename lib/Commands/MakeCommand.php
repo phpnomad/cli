@@ -7,6 +7,8 @@ use PHPNomad\Cli\Scaffolder\RecipeEngine;
 use PHPNomad\Console\Interfaces\Command;
 use PHPNomad\Console\Interfaces\Input;
 use PHPNomad\Console\Interfaces\OutputStrategy;
+use InvalidArgumentException;
+use JsonException;
 
 class MakeCommand implements Command
 {
@@ -51,7 +53,12 @@ class MakeCommand implements Command
             return 1;
         }
 
-        $vars = $this->parseVars($input);
+        try {
+            $vars = $this->parseVars($input);
+        } catch (InvalidArgumentException $e) {
+            $this->output->error($e->getMessage());
+            return 1;
+        }
 
         return $this->engine->execute($from, $vars, $projectRoot, $this->indexer, $this->output);
     }
@@ -86,12 +93,30 @@ class MakeCommand implements Command
             return [];
         }
 
-        $vars = json_decode($varsJson, true);
-
-        if (!is_array($vars)) {
-            return [];
+        try {
+            $vars = json_decode($varsJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new InvalidArgumentException('Invalid vars JSON: ' . $e->getMessage());
         }
 
-        return $vars;
+        if (!is_array($vars) || array_is_list($vars)) {
+            throw new InvalidArgumentException('Invalid vars JSON: expected an object.');
+        }
+
+        $normalized = [];
+
+        foreach ($vars as $key => $value) {
+            if (!is_string($key)) {
+                throw new InvalidArgumentException('Invalid vars JSON: expected object keys to be strings.');
+            }
+
+            if (is_array($value) || is_object($value)) {
+                throw new InvalidArgumentException("Invalid vars JSON: value for '$key' must be scalar.");
+            }
+
+            $normalized[$key] = (string) $value;
+        }
+
+        return $normalized;
     }
 }

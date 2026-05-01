@@ -67,12 +67,12 @@ phpnomad context --path=.
 ```
 ## Index Summary
 
-- **Classes**: 60
+- **Classes**: 78
 - **Applications**: 1
 - **Initializers**: 1
 - **Bindings**: 6
-- **Commands**: 4
+- **Commands**: 6
 - **Dependencies**: 7
-- **Dependency Map**: 15
-- **Dependents Map**: 45
-- **Orphans**: 21
+- **Dependency Map**: 21
+- **Dependents Map**: 52
+- **Orphans**: 28
