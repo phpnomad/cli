@@ -268,6 +268,28 @@ class RecipeLoaderTest extends TestCase
         }
     }
 
+    public function testFileOverwriteFlagParsed(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'recipe_') . '.json';
+        file_put_contents($tmpFile, json_encode([
+            'name' => 'overwrite-recipe',
+            'files' => [
+                ['path' => 'composer.json', 'template' => 'composer.json.tpl', 'overwrite' => true],
+                ['path' => 'lib/Foo.php', 'template' => 'foo'],
+            ],
+        ]));
+
+        try {
+            $recipe = $this->loader->load($tmpFile);
+
+            $this->assertCount(2, $recipe->files);
+            $this->assertTrue($recipe->files[0]->overwrite);
+            $this->assertFalse($recipe->files[1]->overwrite);
+        } finally {
+            unlink($tmpFile);
+        }
+    }
+
     public function testKindDefaultsToScaffolding(): void
     {
         $tmpFile = tempnam(sys_get_temp_dir(), 'recipe_') . '.json';

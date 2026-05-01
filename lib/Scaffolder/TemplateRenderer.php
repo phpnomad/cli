@@ -56,27 +56,43 @@ class TemplateRenderer
 
     protected function resolveTemplatePath(string $templateName, ?Kit $kit, ?string $projectPath): string
     {
+        $filename = $this->templateFilename($templateName);
+
         if ($kit !== null) {
-            return rtrim($kit->templatesDir, '/') . '/' . $templateName . '.php.tpl';
+            return rtrim($kit->templatesDir, '/') . '/' . $filename;
         }
 
         if ($projectPath !== null) {
-            $localPath = $this->findProjectLocalTemplate($templateName, $projectPath);
+            $localPath = $this->findProjectLocalTemplate($filename, $projectPath);
 
             if ($localPath !== null) {
                 return $localPath;
             }
         }
 
-        throw new RuntimeException("Template not found: $templateName. No kit owns the recipe and no project-local .phpnomad/templates/$templateName.php.tpl exists.");
+        throw new RuntimeException("Template not found: $templateName. No kit owns the recipe and no project-local .phpnomad/templates/$filename exists.");
     }
 
-    protected function findProjectLocalTemplate(string $templateName, string $startPath): ?string
+    /**
+     * Resolve a template reference to a filename. Names ending in `.tpl` are treated as full
+     * filenames (so non-PHP templates like `wp-plugin-composer.json.tpl` are supported). Bare
+     * names append `.php.tpl` for backward compatibility with the original PHP-only template set.
+     */
+    protected function templateFilename(string $templateName): string
+    {
+        if (str_ends_with($templateName, '.tpl')) {
+            return $templateName;
+        }
+
+        return $templateName . '.php.tpl';
+    }
+
+    protected function findProjectLocalTemplate(string $filename, string $startPath): ?string
     {
         $current = rtrim($startPath, '/');
 
         while (true) {
-            $candidate = $current . '/.phpnomad/templates/' . $templateName . '.php.tpl';
+            $candidate = $current . '/.phpnomad/templates/' . $filename;
 
             if (file_exists($candidate)) {
                 return $candidate;

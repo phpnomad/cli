@@ -163,6 +163,11 @@
             "type": "object",
             "description": "File-specific vars, merged with the recipe's vars when rendering this file's template.",
             "additionalProperties": { "type": "string" }
+          },
+          "overwrite": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, the recipe is allowed to overwrite this file if it already exists. Used by greenfield/bootstrap recipes that intentionally replace placeholder files (e.g. a starter's composer.json). Default false (recipe fails if the file exists)."
           }
         }
       }

@@ -10,7 +10,8 @@ final class RecipeFile
     public function __construct(
         public readonly string $path,
         public readonly string $template,
-        public readonly array $vars = []
+        public readonly array $vars = [],
+        public readonly bool $overwrite = false
     ) {
     }
 }

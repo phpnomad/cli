@@ -207,7 +207,8 @@ class RecipeLoader
             $files[] = new RecipeFile(
                 path: $file['path'],
                 template: $file['template'],
-                vars: $file['vars'] ?? []
+                vars: $file['vars'] ?? [],
+                overwrite: (bool) ($file['overwrite'] ?? false)
             );
         }
 

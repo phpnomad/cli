@@ -106,4 +106,42 @@ class TemplateRendererTest extends TestCase
 
         $this->assertSame('Foo and Foo again', $result);
     }
+
+    public function testTemplateNameWithDotTplUsedAsIs(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-renderer-test-' . uniqid();
+        mkdir($tmpDir, 0755, true);
+
+        try {
+            file_put_contents($tmpDir . '/wp-plugin-composer.json.tpl', '{"name":"{{name}}"}');
+
+            $kit = new Kit('phpnomad', 'wp-plugin-recipes', $tmpDir, $tmpDir);
+
+            $result = $this->renderer->render('wp-plugin-composer.json.tpl', ['name' => 'acme/billing'], $kit);
+
+            $this->assertSame('{"name":"acme/billing"}', $result);
+        } finally {
+            @unlink($tmpDir . '/wp-plugin-composer.json.tpl');
+            rmdir($tmpDir);
+        }
+    }
+
+    public function testBareTemplateNameAppendsPhpTplSuffix(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-renderer-test-' . uniqid();
+        mkdir($tmpDir, 0755, true);
+
+        try {
+            file_put_contents($tmpDir . '/datastore.php.tpl', 'class {{name}} {}');
+
+            $kit = new Kit('phpnomad', 'core-recipes', $tmpDir, $tmpDir);
+
+            $result = $this->renderer->render('datastore', ['name' => 'Order'], $kit);
+
+            $this->assertSame('class Order {}', $result);
+        } finally {
+            @unlink($tmpDir . '/datastore.php.tpl');
+            rmdir($tmpDir);
+        }
+    }
 }

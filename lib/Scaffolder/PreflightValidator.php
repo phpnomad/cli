@@ -54,6 +54,10 @@ class PreflightValidator
         $errors = [];
 
         foreach ($recipe->files as $file) {
+            if ($file->overwrite) {
+                continue;
+            }
+
             $path = $this->resolveVarsInString($file->path, $vars);
             $fullPath = rtrim($projectPath, '/') . '/' . $path;
 
