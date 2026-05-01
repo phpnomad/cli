@@ -7,6 +7,7 @@ use PHPNomad\Cli\Commands\IndexCommand;
 use PHPNomad\Cli\Commands\InspectDiCommand;
 use PHPNomad\Cli\Commands\InspectRoutesCommand;
 use PHPNomad\Cli\Commands\MakeCommand;
+use PHPNomad\Cli\Commands\RtkCommand;
 use PHPNomad\Cli\Strategies\ConsoleLogger;
 use PHPNomad\Console\Interfaces\ConsoleStrategy as ConsoleStrategyInterface;
 use PHPNomad\Console\Interfaces\HasCommands;
@@ -42,6 +43,7 @@ class Initializer implements CanSetContainer, HasClassDefinitions, HasCommands
             InspectRoutesCommand::class,
             ContextCommand::class,
             MakeCommand::class,
+            RtkCommand::class,
         ];
     }
 }

@@ -5,6 +5,8 @@ namespace PHPNomad\Cli\Tests\Commands;
 use PHPNomad\Cli\Commands\MakeCommand;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
 use PHPNomad\Cli\Scaffolder\RecipeEngine;
+use PHPNomad\Cli\Tests\Support\FakeInput;
+use PHPNomad\Cli\Tests\Support\FakeOutput;
 use PHPNomad\Console\Interfaces\OutputStrategy;
 use PHPUnit\Framework\TestCase;
 
@@ -58,6 +60,76 @@ class MakeCommandTest extends TestCase
         } finally {
             rmdir($tmpDir);
         }
+    }
+
+    public function testInvalidJsonVarsFailBeforeRecipeExecution(): void
+    {
+        $output = new FakeOutput();
+        $engine = new class extends RecipeEngine {
+            public bool $executed = false;
+
+            public function __construct()
+            {
+            }
+
+            public function execute(string $from, array $vars, string $projectPath, ProjectIndexer $indexer, OutputStrategy $output): int
+            {
+                $this->executed = true;
+                return 0;
+            }
+        };
+
+        $indexer = new class extends ProjectIndexer {
+            public function __construct()
+            {
+            }
+        };
+
+        $command = new MakeCommand($output, $engine, $indexer);
+        $code = $command->handle(new FakeInput([
+            'from' => 'listener',
+            'path' => dirname(__DIR__, 2),
+            'vars' => '{invalid',
+        ]));
+
+        $this->assertSame(1, $code);
+        $this->assertFalse($engine->executed);
+        $this->assertStringContainsString('Invalid vars JSON', $output->text());
+    }
+
+    public function testJsonArrayVarsFailBecauseMakeExpectsObject(): void
+    {
+        $output = new FakeOutput();
+        $engine = new class extends RecipeEngine {
+            public bool $executed = false;
+
+            public function __construct()
+            {
+            }
+
+            public function execute(string $from, array $vars, string $projectPath, ProjectIndexer $indexer, OutputStrategy $output): int
+            {
+                $this->executed = true;
+                return 0;
+            }
+        };
+
+        $indexer = new class extends ProjectIndexer {
+            public function __construct()
+            {
+            }
+        };
+
+        $command = new MakeCommand($output, $engine, $indexer);
+        $code = $command->handle(new FakeInput([
+            'from' => 'listener',
+            'path' => dirname(__DIR__, 2),
+            'vars' => '["not", "an", "object"]',
+        ]));
+
+        $this->assertSame(1, $code);
+        $this->assertFalse($engine->executed);
+        $this->assertStringContainsString('expected an object', $output->text());
     }
 
     private function createCommand(): MakeCommand

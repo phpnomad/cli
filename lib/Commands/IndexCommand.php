@@ -2,7 +2,9 @@
 
 namespace PHPNomad\Cli\Commands;
 
+use PHPNomad\Cli\Indexer\Models\ProjectIndex;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
+use PHPNomad\Cli\Support\WarningOnlyOutputStrategy;
 use PHPNomad\Console\Interfaces\Command;
 use PHPNomad\Console\Interfaces\Input;
 use PHPNomad\Console\Interfaces\OutputStrategy;
@@ -17,7 +19,7 @@ class IndexCommand implements Command
 
     public function getSignature(): string
     {
-        return 'index {--path=./:Target project path}';
+        return 'index {--path=./:Target project path} {--format=default:Output format — default or summary}';
     }
 
     public function getDescription(): string
@@ -28,16 +30,32 @@ class IndexCommand implements Command
     public function handle(Input $input): int
     {
         $path = realpath($input->getParam('path'));
+        $format = (string) $input->getParam('format', 'default');
 
         if ($path === false || !is_dir($path)) {
             $this->output->error('Path does not exist: ' . $input->getParam('path'));
             return 1;
         }
 
-        $index = $this->indexer->index($path, $this->output);
+        if (!in_array($format, ['default', 'summary'], true)) {
+            $this->output->error('Unsupported format: ' . $format . '. Expected default or summary.');
+            return 1;
+        }
+
+        $indexOutput = $format === 'summary'
+            ? new WarningOnlyOutputStrategy($this->output)
+            : $this->output;
+
+        $index = $this->indexer->index($path, $indexOutput);
+
+        $dir = $this->indexer->save($index, $path);
+
+        if ($format === 'summary') {
+            $this->renderSummary($index, $dir);
+            return 0;
+        }
 
         $this->output->newline();
-        $dir = $this->indexer->save($index, $path);
         $this->output->success("Index written to $dir/");
         $this->output->writeln('  meta.json, classes.jsonl, initializers.jsonl, applications.jsonl,');
         $this->output->writeln('  controllers.jsonl, commands.jsonl, dependencies.jsonl,');
@@ -67,5 +85,30 @@ class IndexCommand implements Command
         $this->output->writeln('  Classes:        ' . count($index->classes));
 
         return 0;
+    }
+
+    protected function renderSummary(ProjectIndex $index, string $dir): void
+    {
+        $this->output->writeln("index: written=$dir/");
+        $this->output->writeln(
+            'summary: '
+            . 'applications=' . count($index->applications)
+            . ' initializers=' . count($index->initializers)
+            . ' bindings=' . $index->getTotalBindings()
+            . ' controllers=' . count($index->resolvedControllers)
+            . ' commands=' . count($index->resolvedCommands)
+            . ' tables=' . count($index->resolvedTables)
+            . ' events=' . count($index->resolvedEvents)
+            . ' listeners=' . $index->getTotalListeners()
+            . ' graphqlTypes=' . count($index->resolvedGraphQLTypes)
+            . ' facades=' . count($index->resolvedFacades)
+            . ' taskHandlers=' . count($index->resolvedTaskHandlers)
+            . ' mutations=' . count($index->resolvedMutations)
+            . ' dependencies=' . count($index->dependencyTrees)
+            . ' dependencyMap=' . count($index->dependencyMap)
+            . ' dependentsMap=' . count($index->dependentsMap)
+            . ' orphans=' . count($index->orphans)
+            . ' classes=' . count($index->classes)
+        );
     }
 }

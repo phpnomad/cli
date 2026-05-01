@@ -75,6 +75,11 @@ class InitializerMutator
         return $this->handleNewMethod($code, $classNode, $registration, $filePath, $newStmts, $oldStmts, $oldTokens);
     }
 
+    /**
+     * @param Node[] $newStmts
+     * @param Node[] $oldStmts
+     * @param array<mixed> $oldTokens
+     */
     protected function handleExistingMethod(
         string $code,
         Stmt\ClassMethod $method,
@@ -384,6 +389,9 @@ class InitializerMutator
         return substr($code, 0, $lastBrace) . $methodString . "\n" . substr($code, $lastBrace);
     }
 
+    /**
+     * @param Node[] $stmts
+     */
     protected function addInterfaceAndUseStatement(Stmt\Class_ $classNode, RecipeRegistration $registration, array &$stmts): void
     {
         $interfaceName = new Name\FullyQualified($registration->interface);
