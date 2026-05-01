@@ -97,6 +97,14 @@ class RecipeEngine
         foreach ($recipe->files as $i => $file) {
             $resolvedPath = $this->resolveVarsInString($file->path, $vars);
 
+            // If the user explicitly passed a namespace, use it for all files instead of resolving
+            // from composer.json. This supports greenfield bootstrap recipes that scaffold a project
+            // before any PSR-4 mapping exists.
+            if (isset($vars['namespace']) && $vars['namespace'] !== '') {
+                $fileNamespaces[$i] = $vars['namespace'];
+                continue;
+            }
+
             try {
                 $fileNamespaces[$i] = $this->namespaceResolver->resolve($resolvedPath, $projectPath);
             } catch (\Throwable $e) {
