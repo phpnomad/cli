@@ -2,6 +2,7 @@
 
 namespace PHPNomad\Cli\Tests\Scaffolder;
 
+use PHPNomad\Cli\Scaffolder\Models\Kit;
 use PHPNomad\Cli\Scaffolder\TemplateRenderer;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -35,18 +36,23 @@ class TemplateRendererTest extends TestCase
         $this->assertSame('Hello Alex, your role is {{role}}', $result);
     }
 
-    public function testRenderBuiltinTemplate(): void
+    public function testRenderResolvesAgainstKitTemplatesDir(): void
     {
-        $result = $this->renderer->render('listener', [
-            'namespace' => 'App\\Listeners',
-            'name' => 'SendWelcomeEmail',
-            'event' => 'App\\Events\\UserCreated',
-        ]);
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-renderer-test-' . uniqid();
+        mkdir($tmpDir, 0755, true);
 
-        $this->assertStringContainsString('namespace App\\Listeners;', $result);
-        $this->assertStringContainsString('class SendWelcomeEmail', $result);
-        $this->assertStringContainsString('use App\\Events\\UserCreated;', $result);
-        $this->assertStringContainsString('// TODO:', $result);
+        try {
+            file_put_contents($tmpDir . '/greeting.php.tpl', 'Hello {{name}}');
+
+            $kit = new Kit('phpnomad', 'core-recipes', $tmpDir, $tmpDir);
+
+            $result = $this->renderer->render('greeting', ['name' => 'Alex'], $kit);
+
+            $this->assertSame('Hello Alex', $result);
+        } finally {
+            @unlink($tmpDir . '/greeting.php.tpl');
+            rmdir($tmpDir);
+        }
     }
 
     public function testRenderFromPath(): void
@@ -60,6 +66,26 @@ class TemplateRendererTest extends TestCase
             $this->assertSame('class Foo {}', $result);
         } finally {
             unlink($tmpFile);
+        }
+    }
+
+    public function testRenderFallsBackToProjectLocalTemplates(): void
+    {
+        $projectPath = sys_get_temp_dir() . '/phpnomad-renderer-test-' . uniqid();
+        $templatesDir = $projectPath . '/.phpnomad/templates';
+        mkdir($templatesDir, 0755, true);
+
+        try {
+            file_put_contents($templatesDir . '/local.php.tpl', 'local class {{name}}');
+
+            $result = $this->renderer->render('local', ['name' => 'Bar'], null, $projectPath);
+
+            $this->assertSame('local class Bar', $result);
+        } finally {
+            @unlink($templatesDir . '/local.php.tpl');
+            rmdir($templatesDir);
+            rmdir($projectPath . '/.phpnomad');
+            rmdir($projectPath);
         }
     }
 
