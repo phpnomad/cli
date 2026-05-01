@@ -415,6 +415,54 @@ PHP);
         }
     }
 
+    public function testMapKeyCollisionDetectedThroughShortFormImports(): void
+    {
+        // The existing key uses a use-imported short form (UserCreated::class)
+        // that resolves to App\Events\UserCreated. The mutator must compare
+        // FQCNs through name resolution, not just string-match the literal
+        // tokens, otherwise the new entry gets appended with a duplicate key
+        // and PHP silently collapses one of them.
+        $file = $this->writeInitializer(<<<'PHP'
+<?php
+
+namespace App;
+
+use App\Events\UserCreated;
+use App\Listeners\FirstListener;
+use PHPNomad\Events\Interfaces\HasListeners;
+
+class AppInit implements HasListeners
+{
+    public function getListeners(): array
+    {
+        return [
+            UserCreated::class => FirstListener::class,
+        ];
+    }
+}
+PHP);
+
+        $reg = new RecipeRegistration(
+            initializer: 'App\\AppInit',
+            method: 'getListeners',
+            interface: 'PHPNomad\\Events\\Interfaces\\HasListeners',
+            type: 'map',
+            key: 'App\\Events\\UserCreated',
+            value: 'App\\Listeners\\SecondListener'
+        );
+
+        $result = $this->mutator->mutate($file, $reg);
+
+        $this->assertTrue($result->success);
+
+        $content = file_get_contents($file);
+        $this->assertStringContainsString('FirstListener', $content);
+        $this->assertStringContainsString('SecondListener', $content);
+        // Both must end up under one key — second occurrence of UserCreated::class
+        // would mean duplicate keys (one would silently win at runtime).
+        $this->assertSame(1, substr_count($content, 'UserCreated::class'));
+    }
+
     public function testCreatedMethodFormattedProperly(): void
     {
         $file = $this->writeInitializer(<<<'PHP'

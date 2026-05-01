@@ -49,10 +49,13 @@ class InitializerMutator
         $traverser->addVisitor(new CloningVisitor());
         $newStmts = $traverser->traverse($oldStmts);
 
-        // Resolve names on a separate traversal to get FQCNs
+        // Resolve names so duplicate / collision detection compares FQCNs.
+        // replaceNodes: false attaches a "resolvedName" attribute instead of
+        // replacing Name nodes with Name\FullyQualified — preserving short
+        // forms (e.g. Ready::class) when the file is printed back out.
         $resolverTraverser = new NodeTraverser();
-        $resolverTraverser->addVisitor(new NameResolver());
-        $resolverTraverser->traverse($oldStmts);
+        $resolverTraverser->addVisitor(new NameResolver(null, ['replaceNodes' => false]));
+        $resolverTraverser->traverse($newStmts);
 
         $nodeFinder = new NodeFinder();
 
@@ -238,6 +241,16 @@ class InitializerMutator
             && $expr->name instanceof Identifier
             && $expr->name->name === 'class'
         ) {
+            // Prefer the NameResolver-attached resolvedName so short forms
+            // like Ready::class compare correctly against the registration's
+            // FQCN. Falls back to the unresolved name when the resolver
+            // hasn't run (e.g. tests calling helpers directly).
+            $resolved = $expr->class->getAttribute('resolvedName');
+
+            if ($resolved instanceof Name) {
+                return $resolved->toString();
+            }
+
             if ($expr->class instanceof Name\FullyQualified) {
                 return $expr->class->toString();
             }
