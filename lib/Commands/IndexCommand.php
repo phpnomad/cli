@@ -4,6 +4,8 @@ namespace PHPNomad\Cli\Commands;
 
 use PHPNomad\Cli\Indexer\Models\ProjectIndex;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
+use PHPNomad\Cli\Scaffolder\Models\Recipe;
+use PHPNomad\Cli\Scaffolder\RecipeRegistry;
 use PHPNomad\Cli\Support\WarningOnlyOutputStrategy;
 use PHPNomad\Console\Interfaces\Command;
 use PHPNomad\Console\Interfaces\Input;
@@ -13,7 +15,8 @@ class IndexCommand implements Command
 {
     public function __construct(
         protected OutputStrategy $output,
-        protected ProjectIndexer $indexer
+        protected ProjectIndexer $indexer,
+        protected RecipeRegistry $registry
     ) {
     }
 
@@ -50,8 +53,10 @@ class IndexCommand implements Command
 
         $dir = $this->indexer->save($index, $path);
 
+        $recipeCount = $this->writeRecipesManifest($path, $dir);
+
         if ($format === 'summary') {
-            $this->renderSummary($index, $dir);
+            $this->renderSummary($index, $dir, $recipeCount);
             return 0;
         }
 
@@ -63,6 +68,10 @@ class IndexCommand implements Command
         $this->output->writeln('  facades.jsonl, task-handlers.jsonl, mutations.jsonl,');
         $this->output->writeln('  dependency-map.jsonl, dependents-map.jsonl, orphans.jsonl,');
         $this->output->writeln('  phpnomad-cli.md');
+
+        if ($recipeCount > 0) {
+            $this->output->writeln("  recipes.jsonl ($recipeCount active recipe(s))");
+        }
 
         $this->output->newline();
         $this->output->info('Summary');
@@ -83,11 +92,12 @@ class IndexCommand implements Command
         $this->output->writeln('  Dependents map: ' . count($index->dependentsMap));
         $this->output->writeln('  Orphans:        ' . count($index->orphans));
         $this->output->writeln('  Classes:        ' . count($index->classes));
+        $this->output->writeln('  Recipes:        ' . $recipeCount);
 
         return 0;
     }
 
-    protected function renderSummary(ProjectIndex $index, string $dir): void
+    protected function renderSummary(ProjectIndex $index, string $dir, int $recipeCount): void
     {
         $this->output->writeln("index: written=$dir/");
         $this->output->writeln(
@@ -109,6 +119,71 @@ class IndexCommand implements Command
             . ' dependentsMap=' . count($index->dependentsMap)
             . ' orphans=' . count($index->orphans)
             . ' classes=' . count($index->classes)
+            . ' recipes=' . $recipeCount
         );
+    }
+
+    protected function writeRecipesManifest(string $projectPath, string $indexDir): int
+    {
+        $recipes = $this->registry->active($projectPath);
+
+        if (empty($recipes)) {
+            return 0;
+        }
+
+        $jsonlPath = rtrim($indexDir, '/') . '/recipes.jsonl';
+        $fh = fopen($jsonlPath, 'w');
+
+        if ($fh === false) {
+            return 0;
+        }
+
+        try {
+            foreach ($recipes as $identifier => $recipe) {
+                fwrite($fh, json_encode($this->recipeToArray($identifier, $recipe), JSON_UNESCAPED_SLASHES) . "\n");
+            }
+        } finally {
+            fclose($fh);
+        }
+
+        return count($recipes);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function recipeToArray(string $identifier, Recipe $recipe): array
+    {
+        $data = [
+            'name' => $identifier,
+            'kind' => $recipe->kind,
+            'summary' => $recipe->summary,
+            'description' => $recipe->description,
+            'problem' => $recipe->problem,
+            'appliesWhen' => $recipe->appliesWhen,
+            'avoidWhen' => $recipe->avoidWhen,
+            'synonyms' => $recipe->synonyms,
+            'examples' => $recipe->examples,
+            'tags' => $recipe->tags,
+            'tradeoffs' => $recipe->tradeoffs,
+            'relatedPatterns' => $recipe->relatedPatterns,
+            'stability' => $recipe->stability,
+            'outputs' => $recipe->outputs,
+            'postApply' => $recipe->postApply,
+            'vars' => array_map(fn($v) => [
+                'name' => $v->name,
+                'type' => $v->type,
+                'description' => $v->description,
+                'example' => $v->example,
+                'aiHint' => $v->aiHint,
+            ], $recipe->vars),
+            'composes' => array_map(fn($r) => $r->recipe, $recipe->recipes),
+        ];
+
+        $data['originKit'] = $recipe->originKit !== null
+            ? ['vendor' => $recipe->originKit->vendor, 'packageName' => $recipe->originKit->packageName]
+            : null;
+
+        return $data;
     }
 }

@@ -131,7 +131,7 @@ class RecipeEngine
 
             // Render template
             try {
-                $content = $this->renderer->render($file->template, $resolvedVars);
+                $content = $this->renderer->render($file->template, $resolvedVars, $recipe->originKit, $projectPath);
             } catch (\Throwable $e) {
                 $output->error("Template error: " . $e->getMessage());
                 return 1;

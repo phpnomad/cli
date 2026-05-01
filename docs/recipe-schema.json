@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://phpnomad.com/schemas/recipe.json",
+  "title": "PHPNomad Recipe",
+  "description": "Schema for PHPNomad scaffolding recipes. Defines a structured pattern that the CLI can apply to a project: files to generate, registrations to perform, and child recipes to compose.",
+  "type": "object",
+  "required": ["name"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Recipe identifier. For kit-published recipes, the file's basename within the kit's recipes directory becomes the name segment, paired with the kit's vendor (e.g., phpnomad/datastore)."
+    },
+    "description": {
+      "type": "string",
+      "description": "Free-text description of what the recipe does."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "One-line description used in list views and quick scans. Keep under 100 characters."
+    },
+    "problem": {
+      "type": "string",
+      "description": "User-facing statement of the problem this recipe solves, framed in the user's voice (e.g., 'You have a recurring entity that needs persistent storage'). Different from description, which describes the recipe; problem describes the user's situation."
+    },
+    "appliesWhen": {
+      "type": "array",
+      "description": "Match signals. Free-text conditions under which this is the right pattern. AI agents use these to map user intent to recipes.",
+      "items": { "type": "string" }
+    },
+    "avoidWhen": {
+      "type": "array",
+      "description": "Anti-patterns. Free-text conditions under which this recipe should NOT be used. Prevents wrong matches.",
+      "items": { "type": "string" }
+    },
+    "synonyms": {
+      "type": "object",
+      "description": "Vocabulary translations keyed by domain (e.g., 'wordpress', 'general', 'laravel'). Each domain maps to an array of terms users in that domain typically use for the concept this recipe encodes.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "description": "Sample user intents that should match this recipe (e.g., 'I need to track customer orders'). Used by AI agents for calibration and by validation tooling as test fixtures.",
+      "items": { "type": "string" }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Filterable axes for grouping and narrowing the recipe search space (e.g., 'data', 'wordpress', 'crud').",
+      "items": { "type": "string" }
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["scaffolding", "advisory", "composite"],
+      "default": "scaffolding",
+      "description": "Recipe kind. 'scaffolding' produces files and registrations. 'advisory' is pure pattern guidance with no scaffolding. 'composite' bundles other recipes without adding files of its own."
+    },
+    "tradeoffs": {
+      "type": "string",
+      "description": "Free-text description of what applying this pattern costs (e.g., 'Adds three files plus a DI binding; couples the entity to the data layer'). Helps AI agents and humans evaluate fit."
+    },
+    "relatedPatterns": {
+      "type": "array",
+      "description": "Pointers to related recipes. Used by AI agents to plan multi-step work and present alternatives.",
+      "items": {
+        "type": "object",
+        "required": ["recipe", "relationship"],
+        "additionalProperties": false,
+        "properties": {
+          "recipe": {
+            "type": "string",
+            "description": "Recipe identifier (vendor/name or project-local)."
+          },
+          "relationship": {
+            "type": "string",
+            "description": "Nature of the relationship (e.g., 'often-paired', 'alternative-to', 'implements-interface-of', 'data-shape-companion'). Free-text, AI-readable."
+          }
+        }
+      }
+    },
+    "stability": {
+      "type": "string",
+      "enum": ["stable", "experimental", "deprecated"],
+      "description": "Maturity of the recipe. AI agents prefer stable patterns and warn on deprecated."
+    },
+    "outputs": {
+      "type": "array",
+      "description": "Human-readable list of what the recipe produces after running (e.g., 'A {name}Datastore class', 'A DI binding for {name}DatastoreInterface'). Helps AI agents explain the proposed change before applying it.",
+      "items": { "type": "string" }
+    },
+    "postApply": {
+      "type": "array",
+      "description": "Typical follow-up steps the user should take after the recipe is applied (e.g., 'Implement TODO methods in {name}Datastore.php', 'Register a controller that uses this datastore'). Helps AI agents plan multi-step work.",
+      "items": { "type": "string" }
+    },
+    "vars": {
+      "type": "object",
+      "description": "Named variables the recipe requires from the caller. Keys become placeholder names usable as {{name}} inside paths, templates, and registration fields.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "default": "string",
+            "description": "Var type. Currently informational only; the engine treats all vars as strings during substitution."
+          },
+          "description": {
+            "type": "string",
+            "default": "",
+            "description": "Human-readable description of what the var represents."
+          },
+          "example": {
+            "type": "string",
+            "description": "Sample value for the var, used in documentation and AI prompts."
+          },
+          "aiHint": {
+            "type": "string",
+            "description": "Guidance written specifically for an AI agent deciding what value to pass for this var (e.g., 'Use the singular form of the entity, PascalCase, no Model/Entity suffix')."
+          }
+        }
+      }
+    },
+    "requires": {
+      "type": "array",
+      "description": "Preflight requirements that must be satisfied before the recipe can run.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "default": "binding",
+            "description": "Requirement type. Currently 'binding' (a DI binding must already exist in the project)."
+          },
+          "value": {
+            "type": "string",
+            "description": "Requirement value. For 'binding', the FQCN of the required interface."
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Files the recipe creates. Paths and template names support {{var}} placeholders.",
+      "items": {
+        "type": "object",
+        "required": ["path", "template"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Project-relative path where the file is written. Supports {{var}} placeholders."
+          },
+          "template": {
+            "type": "string",
+            "description": "Template name (without .php.tpl suffix). Resolved relative to the recipe's origin kit."
+          },
+          "vars": {
+            "type": "object",
+            "description": "File-specific vars, merged with the recipe's vars when rendering this file's template.",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    },
+    "registrations": {
+      "type": "array",
+      "description": "Registrations performed against an initializer after files are written. The CLI mutates the initializer's AST to add or extend Has* contributions.",
+      "items": {
+        "type": "object",
+        "required": ["initializer", "method", "interface", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "initializer": {
+            "type": "string",
+            "description": "FQCN of the initializer class to mutate. Supports {{var}} placeholders."
+          },
+          "method": {
+            "type": "string",
+            "description": "Method on the initializer to extend (e.g., getClassDefinitions, getListeners)."
+          },
+          "interface": {
+            "type": "string",
+            "description": "Has* interface that backs the method (e.g., PHPNomad\\Loader\\Interfaces\\HasClassDefinitions). Added to the initializer if missing."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["map", "list"],
+            "description": "Shape of the registration. 'map' produces key=>value pairs; 'list' produces a flat array of values."
+          },
+          "key": {
+            "type": "string",
+            "description": "Map key when type=map. Supports {{var}} placeholders."
+          },
+          "value": {
+            "type": "string",
+            "description": "Map value (for type=map) or list entry (for type=list). Supports {{var}} placeholders."
+          }
+        }
+      }
+    },
+    "recipes": {
+      "type": "array",
+      "description": "Child recipe references. Children execute before this recipe's files and registrations, with parent vars flowing down as defaults.",
+      "items": {
+        "type": "object",
+        "required": ["recipe"],
+        "additionalProperties": false,
+        "properties": {
+          "recipe": {
+            "type": "string",
+            "description": "Recipe identifier. Either a kit-published name (vendor/recipe) or a project-local name."
+          },
+          "vars": {
+            "type": "object",
+            "description": "Var overrides for the child recipe. Override values may reference parent vars via {{var}} placeholders.",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

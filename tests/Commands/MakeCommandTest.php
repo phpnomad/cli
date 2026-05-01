@@ -39,7 +39,7 @@ class MakeCommandTest extends TestCase
         $command = $this->createCommand();
 
         $projectRoot = dirname(__DIR__, 2);
-        $subDir = $projectRoot . '/lib/Scaffolder/Recipes';
+        $subDir = $projectRoot . '/lib/Scaffolder/Models';
         $result = $this->callFindProjectRoot($command, $subDir);
 
         $this->assertSame($projectRoot, $result);

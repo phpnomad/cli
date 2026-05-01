@@ -6,6 +6,10 @@ use PHPNomad\Cli\Commands\IndexCommand;
 use PHPNomad\Cli\Indexer\Models\IndexedApplication;
 use PHPNomad\Cli\Indexer\Models\ProjectIndex;
 use PHPNomad\Cli\Indexer\ProjectIndexer;
+use PHPNomad\Cli\Scaffolder\KitDiscoverer;
+use PHPNomad\Cli\Scaffolder\ProjectConfig;
+use PHPNomad\Cli\Scaffolder\RecipeLoader;
+use PHPNomad\Cli\Scaffolder\RecipeRegistry;
 use PHPNomad\Cli\Tests\Support\FakeInput;
 use PHPNomad\Cli\Tests\Support\FakeOutput;
 use PHPUnit\Framework\TestCase;
@@ -42,7 +46,10 @@ class IndexCommandTest extends TestCase
             }
         };
 
-        $command = new IndexCommand($output, $indexer);
+        $discoverer = new KitDiscoverer();
+        $registry = new RecipeRegistry($discoverer, new RecipeLoader($discoverer), new ProjectConfig());
+
+        $command = new IndexCommand($output, $indexer, $registry);
         $code = $command->handle(new FakeInput([
             'path' => __DIR__,
             'format' => 'summary',

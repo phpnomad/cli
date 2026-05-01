@@ -2,42 +2,104 @@
 
 namespace PHPNomad\Cli\Tests\Scaffolder;
 
+use PHPNomad\Cli\Scaffolder\KitDiscoverer;
 use PHPNomad\Cli\Scaffolder\RecipeLoader;
-use PHPNomad\Cli\Scaffolder\Models\Recipe;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 class RecipeLoaderTest extends TestCase
 {
+    private string $projectPath;
     private RecipeLoader $loader;
 
     protected function setUp(): void
     {
-        $this->loader = new RecipeLoader();
+        $this->projectPath = sys_get_temp_dir() . '/phpnomad-loader-test-' . uniqid();
+        mkdir($this->projectPath, 0755, true);
+
+        // Stand up a fake phpnomad/core-recipes kit so kit-published recipe lookups have something to find.
+        $this->installKit('phpnomad', 'core-recipes', [
+            'listener.json' => [
+                'name' => 'listener',
+                'description' => 'Generates an event listener',
+                'vars' => [
+                    'name' => ['type' => 'string', 'description' => 'Listener class name'],
+                    'event' => ['type' => 'string', 'description' => 'Event FQCN'],
+                    'initializer' => ['type' => 'string', 'description' => 'Initializer FQCN'],
+                ],
+                'files' => [
+                    ['path' => 'lib/Listeners/{{name}}.php', 'template' => 'listener'],
+                ],
+                'registrations' => [
+                    [
+                        'initializer' => '{{initializer}}',
+                        'method' => 'getListeners',
+                        'interface' => 'PHPNomad\\Loader\\Interfaces\\HasListeners',
+                        'type' => 'map',
+                    ],
+                ],
+            ],
+            'event.json' => [
+                'name' => 'event',
+                'vars' => [
+                    'name' => ['type' => 'string', 'description' => 'Event class name'],
+                    'eventId' => ['type' => 'string', 'description' => 'Event ID'],
+                ],
+                'files' => [
+                    ['path' => 'lib/Events/{{name}}.php', 'template' => 'event'],
+                ],
+            ],
+            'task.json' => [
+                'name' => 'task',
+                'vars' => [
+                    'name' => ['type' => 'string', 'description' => 'Task class name'],
+                ],
+                'files' => [
+                    ['path' => 'lib/Tasks/{{name}}.php', 'template' => 'task'],
+                ],
+            ],
+        ]);
+
+        $this->loader = new RecipeLoader(new KitDiscoverer());
     }
 
-    public function testLoadBuiltinRecipe(): void
+    protected function tearDown(): void
     {
-        $recipe = $this->loader->load('listener');
+        $this->removeDir($this->projectPath);
+    }
+
+    public function testLoadKitRecipe(): void
+    {
+        $recipe = $this->loader->load('phpnomad/listener', $this->projectPath);
 
         $this->assertSame('listener', $recipe->name);
         $this->assertNotEmpty($recipe->vars);
         $this->assertNotEmpty($recipe->files);
         $this->assertNotEmpty($recipe->registrations);
+        $this->assertNotNull($recipe->originKit);
+        $this->assertSame('phpnomad', $recipe->originKit->vendor);
     }
 
     public function testLoadFromFilePath(): void
     {
-        $path = __DIR__ . '/../../lib/Scaffolder/Recipes/event.json';
-        $recipe = $this->loader->load($path);
+        $tmpFile = tempnam(sys_get_temp_dir(), 'recipe_') . '.json';
+        file_put_contents($tmpFile, json_encode([
+            'name' => 'inline-recipe',
+            'vars' => ['name' => ['type' => 'string', 'description' => '']],
+        ]));
 
-        $this->assertSame('event', $recipe->name);
-        $this->assertCount(2, $recipe->vars);
+        try {
+            $recipe = $this->loader->load($tmpFile);
+            $this->assertSame('inline-recipe', $recipe->name);
+            $this->assertNull($recipe->originKit);
+        } finally {
+            unlink($tmpFile);
+        }
     }
 
     public function testVarsParsedCorrectly(): void
     {
-        $recipe = $this->loader->load('listener');
+        $recipe = $this->loader->load('phpnomad/listener', $this->projectPath);
 
         $varNames = array_map(fn($v) => $v->name, $recipe->vars);
 
@@ -48,7 +110,7 @@ class RecipeLoaderTest extends TestCase
 
     public function testFilesParsedCorrectly(): void
     {
-        $recipe = $this->loader->load('listener');
+        $recipe = $this->loader->load('phpnomad/listener', $this->projectPath);
 
         $this->assertCount(1, $recipe->files);
         $this->assertSame('lib/Listeners/{{name}}.php', $recipe->files[0]->path);
@@ -57,7 +119,7 @@ class RecipeLoaderTest extends TestCase
 
     public function testRegistrationsParsedCorrectly(): void
     {
-        $recipe = $this->loader->load('listener');
+        $recipe = $this->loader->load('phpnomad/listener', $this->projectPath);
 
         $this->assertCount(1, $recipe->registrations);
         $reg = $recipe->registrations[0];
@@ -71,7 +133,15 @@ class RecipeLoaderTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Recipe not found');
 
-        $this->loader->load('nonexistent-recipe');
+        $this->loader->load('phpnomad/nonexistent', $this->projectPath);
+    }
+
+    public function testBareNameWithNoProjectLocalThrows(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Recipe not found');
+
+        $this->loader->load('listener', $this->projectPath);
     }
 
     public function testInvalidJsonThrows(): void
@@ -104,112 +174,28 @@ class RecipeLoaderTest extends TestCase
         }
     }
 
-    public function testPerFileVarsParsed(): void
+    public function testProjectLocalRecipeLoadsByBareName(): void
     {
-        $tmpFile = tempnam(sys_get_temp_dir(), 'recipe_') . '.json';
-        file_put_contents($tmpFile, json_encode([
-            'name' => 'test',
+        $recipesDir = $this->projectPath . '/.phpnomad/recipes';
+        mkdir($recipesDir, 0755, true);
+        file_put_contents($recipesDir . '/custom.json', json_encode([
+            'name' => 'custom-recipe',
+            'description' => 'Project-local recipe',
             'files' => [
-                [
-                    'path' => 'lib/Test.php',
-                    'template' => 'test',
-                    'vars' => ['className' => 'Override'],
-                ],
+                ['path' => 'lib/{{name}}.php', 'template' => 'custom'],
             ],
         ]));
 
-        try {
-            $recipe = $this->loader->load($tmpFile);
+        $recipe = $this->loader->load('custom', $this->projectPath);
 
-            $this->assertSame(['className' => 'Override'], $recipe->files[0]->vars);
-        } finally {
-            unlink($tmpFile);
-        }
-    }
-
-    public function testProjectLocalRecipeOverridesBuiltin(): void
-    {
-        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
-        $recipesDir = $tmpDir . '/.phpnomad/recipes';
-        mkdir($recipesDir, 0755, true);
-        file_put_contents($recipesDir . '/task.json', json_encode([
-            'name' => 'custom-task',
-            'description' => 'Project-local task recipe',
-            'files' => [
-                [
-                    'path' => 'lib/{{domain}}/Core/Tasks/{{name}}.php',
-                    'template' => 'task',
-                ],
-            ],
-        ]));
-
-        try {
-            $recipe = $this->loader->load('task', $tmpDir);
-
-            $this->assertSame('custom-task', $recipe->name);
-            $this->assertSame('lib/{{domain}}/Core/Tasks/{{name}}.php', $recipe->files[0]->path);
-        } finally {
-            unlink($recipesDir . '/task.json');
-            rmdir($recipesDir);
-            rmdir($tmpDir . '/.phpnomad');
-            rmdir($tmpDir);
-        }
-    }
-
-    public function testFallsBackToBuiltinWhenNoProjectLocal(): void
-    {
-        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
-        mkdir($tmpDir);
-
-        try {
-            $recipe = $this->loader->load('task', $tmpDir);
-
-            $this->assertSame('task', $recipe->name);
-        } finally {
-            rmdir($tmpDir);
-        }
-    }
-
-    public function testProjectLocalRecipeIgnoredForExplicitPaths(): void
-    {
-        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
-        $recipesDir = $tmpDir . '/.phpnomad/recipes';
-        mkdir($recipesDir, 0755, true);
-        file_put_contents($recipesDir . '/task.json', json_encode([
-            'name' => 'custom-task',
-            'files' => [],
-        ]));
-
-        $builtinPath = __DIR__ . '/../../lib/Scaffolder/Recipes/task.json';
-
-        try {
-            // Explicit path should bypass project-local resolution
-            $recipe = $this->loader->load($builtinPath, $tmpDir);
-
-            $this->assertSame('task', $recipe->name);
-        } finally {
-            unlink($recipesDir . '/task.json');
-            rmdir($recipesDir);
-            rmdir($tmpDir . '/.phpnomad');
-            rmdir($tmpDir);
-        }
-    }
-
-    public function testProjectPathNullFallsBackToBuiltin(): void
-    {
-        $recipe = $this->loader->load('task', null);
-
-        $this->assertSame('task', $recipe->name);
+        $this->assertSame('custom-recipe', $recipe->name);
+        $this->assertNull($recipe->originKit);
     }
 
     public function testProjectLocalRecipeFoundFromSubpackageDirectory(): void
     {
-        // Simulates Siren's multi-package structure:
-        // project-root/.phpnomad/recipes/task.json exists
-        // but --path resolves to project-root/mu-plugins/siren-core/ (the package root)
-        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
-        $recipesDir = $tmpDir . '/.phpnomad/recipes';
-        $packageDir = $tmpDir . '/mu-plugins/siren-core';
+        $recipesDir = $this->projectPath . '/.phpnomad/recipes';
+        $packageDir = $this->projectPath . '/mu-plugins/siren-core';
         mkdir($recipesDir, 0755, true);
         mkdir($packageDir, 0755, true);
 
@@ -217,26 +203,122 @@ class RecipeLoaderTest extends TestCase
             'name' => 'siren-task',
             'description' => 'Stack elevator task recipe',
             'files' => [
-                [
-                    'path' => 'lib/{{domain}}/Core/Tasks/{{name}}.php',
-                    'template' => 'task',
+                ['path' => 'lib/{{domain}}/Core/Tasks/{{name}}.php', 'template' => 'task'],
+            ],
+        ]));
+
+        $recipe = $this->loader->load('task', $packageDir);
+
+        $this->assertSame('siren-task', $recipe->name);
+        $this->assertSame('lib/{{domain}}/Core/Tasks/{{name}}.php', $recipe->files[0]->path);
+    }
+
+    public function testNewMetadataFieldsParsed(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'recipe_') . '.json';
+        file_put_contents($tmpFile, json_encode([
+            'name' => 'metadata-recipe',
+            'summary' => 'A recipe with full metadata',
+            'problem' => 'You need a thing to test parsing',
+            'appliesWhen' => ['When you are testing', 'When you need data'],
+            'avoidWhen' => ['When you are not testing'],
+            'synonyms' => ['general' => ['test thing'], 'wordpress' => ['plugin thing']],
+            'examples' => ['I need a test thing'],
+            'tags' => ['test', 'metadata'],
+            'kind' => 'scaffolding',
+            'tradeoffs' => 'Adds boilerplate',
+            'relatedPatterns' => [
+                ['recipe' => 'phpnomad/datastore', 'relationship' => 'often-paired'],
+            ],
+            'stability' => 'experimental',
+            'outputs' => ['A test class'],
+            'postApply' => ['Run the tests'],
+            'vars' => [
+                'name' => [
+                    'type' => 'string',
+                    'description' => 'Class name',
+                    'example' => 'TestThing',
+                    'aiHint' => 'Use PascalCase, no Test prefix',
                 ],
             ],
         ]));
 
         try {
-            // Pass the package directory as projectPath — loader should walk up to find .phpnomad/recipes/
-            $recipe = $this->loader->load('task', $packageDir);
+            $recipe = $this->loader->load($tmpFile);
 
-            $this->assertSame('siren-task', $recipe->name);
-            $this->assertSame('lib/{{domain}}/Core/Tasks/{{name}}.php', $recipe->files[0]->path);
+            $this->assertSame('A recipe with full metadata', $recipe->summary);
+            $this->assertSame('You need a thing to test parsing', $recipe->problem);
+            $this->assertSame(['When you are testing', 'When you need data'], $recipe->appliesWhen);
+            $this->assertSame(['When you are not testing'], $recipe->avoidWhen);
+            $this->assertSame(['general' => ['test thing'], 'wordpress' => ['plugin thing']], $recipe->synonyms);
+            $this->assertSame(['I need a test thing'], $recipe->examples);
+            $this->assertSame(['test', 'metadata'], $recipe->tags);
+            $this->assertSame('scaffolding', $recipe->kind);
+            $this->assertSame('Adds boilerplate', $recipe->tradeoffs);
+            $this->assertSame([['recipe' => 'phpnomad/datastore', 'relationship' => 'often-paired']], $recipe->relatedPatterns);
+            $this->assertSame('experimental', $recipe->stability);
+            $this->assertSame(['A test class'], $recipe->outputs);
+            $this->assertSame(['Run the tests'], $recipe->postApply);
+
+            $this->assertCount(1, $recipe->vars);
+            $this->assertSame('TestThing', $recipe->vars[0]->example);
+            $this->assertSame('Use PascalCase, no Test prefix', $recipe->vars[0]->aiHint);
         } finally {
-            unlink($recipesDir . '/task.json');
-            rmdir($recipesDir);
-            rmdir($tmpDir . '/.phpnomad');
-            rmdir($packageDir);
-            rmdir($tmpDir . '/mu-plugins');
-            rmdir($tmpDir);
+            unlink($tmpFile);
         }
+    }
+
+    public function testKindDefaultsToScaffolding(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'recipe_') . '.json';
+        file_put_contents($tmpFile, json_encode(['name' => 'plain']));
+
+        try {
+            $recipe = $this->loader->load($tmpFile);
+            $this->assertSame('scaffolding', $recipe->kind);
+        } finally {
+            unlink($tmpFile);
+        }
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $recipes
+     */
+    private function installKit(string $vendor, string $package, array $recipes): void
+    {
+        $packageDir = $this->projectPath . '/vendor/' . $vendor . '/' . $package;
+        mkdir($packageDir . '/recipes', 0755, true);
+        mkdir($packageDir . '/templates', 0755, true);
+
+        file_put_contents($packageDir . '/composer.json', json_encode([
+            'name' => $vendor . '/' . $package,
+            'extra' => ['phpnomad' => ['recipes' => 'recipes/', 'templates' => 'templates/']],
+        ]));
+
+        foreach ($recipes as $filename => $recipe) {
+            file_put_contents($packageDir . '/recipes/' . $filename, json_encode($recipe));
+        }
+    }
+
+    private function removeDir(string $path): void
+    {
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($items as $item) {
+            if ($item->isDir()) {
+                rmdir($item->getPathname());
+            } else {
+                unlink($item->getPathname());
+            }
+        }
+
+        rmdir($path);
     }
 }
