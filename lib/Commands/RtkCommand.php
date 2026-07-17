@@ -179,6 +179,8 @@ class RtkCommand implements Command
             $existing
         ) ?? $existing;
 
+        $cleaned = $this->stripCollidingSections($cleaned, $this->extractSectionNames($body));
+
         $cleaned = trim($cleaned);
 
         if ($cleaned === '') {
@@ -190,5 +192,59 @@ class RtkCommand implements Command
         }
 
         return rtrim($cleaned) . "\n\n" . $block . "\n";
+    }
+
+    /**
+     * Table names (`[filters.<name>]` / `[[tests.<name>]]`) defined by the
+     * bundled filter block.
+     *
+     * @return string[]
+     */
+    protected function extractSectionNames(string $toml): array
+    {
+        preg_match_all('/^\s*\[\[?\s*(?:filters|tests)\.([A-Za-z0-9_-]+)/m', $toml, $matches);
+
+        return array_values(array_unique($matches[1]));
+    }
+
+    /**
+     * Remove existing `[filters.*]` / `[[tests.*]]` sections whose names
+     * collide with the bundled block. Repos that committed the bundled
+     * filters by hand (without the marker block) would otherwise end up with
+     * duplicate TOML tables — a parse error that disables every filter.
+     * Tracks triple-quoted strings so headers inside multiline values are
+     * ignored.
+     *
+     * @param string[] $names
+     */
+    protected function stripCollidingSections(string $existing, array $names): string
+    {
+        if ($names === []) {
+            return $existing;
+        }
+
+        $kept = [];
+        $inMultiline = false;
+        $skipping = false;
+
+        foreach (preg_split('/\R/', $existing) ?: [] as $line) {
+            if (!$inMultiline && preg_match('/^\s*\[/', $line)) {
+                $isColliding = preg_match('/^\s*\[\[?\s*(?:filters|tests)\.([A-Za-z0-9_-]+)/', $line, $match)
+                    && in_array($match[1], $names, true);
+                $skipping = $isColliding;
+            }
+
+            if (!$skipping) {
+                $kept[] = $line;
+            }
+
+            $quoteCount = substr_count($line, '"""') + substr_count($line, "'''");
+
+            if ($quoteCount % 2 === 1) {
+                $inMultiline = !$inMultiline;
+            }
+        }
+
+        return implode("\n", $kept);
     }
 }
