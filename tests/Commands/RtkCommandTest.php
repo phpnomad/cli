@@ -63,6 +63,40 @@ class RtkCommandTest extends TestCase
         $this->assertSame(1, substr_count($content, '[filters.phpnomad-index]'));
     }
 
+    public function testProjectInstallAddsClaudeHook(): void
+    {
+        $output = new FakeOutput();
+        $command = new RtkCommand($output);
+
+        $code = $command->handle(new FakeInput([
+            'project' => true,
+            'path' => $this->tmpDir,
+        ]));
+
+        $this->assertSame(0, $code);
+        $this->assertFileExists($this->tmpDir . '/.claude/hooks/phpnomad-rtk.php');
+        $this->assertFileExists($this->tmpDir . '/.claude/settings.json');
+
+        $settings = json_decode((string) file_get_contents($this->tmpDir . '/.claude/settings.json'), true);
+        $this->assertSame('Bash', $settings['hooks']['PreToolUse'][0]['matcher']);
+        $this->assertStringContainsString(
+            'phpnomad-rtk.php',
+            $settings['hooks']['PreToolUse'][0]['hooks'][0]['command']
+        );
+    }
+
+    public function testProjectInstallClaudeHookIsIdempotent(): void
+    {
+        $command = new RtkCommand(new FakeOutput());
+        $input = new FakeInput(['project' => true, 'path' => $this->tmpDir]);
+
+        $this->assertSame(0, $command->handle($input));
+        $this->assertSame(0, $command->handle($input));
+
+        $settings = json_decode((string) file_get_contents($this->tmpDir . '/.claude/settings.json'), true);
+        $this->assertCount(1, $settings['hooks']['PreToolUse']);
+    }
+
     public function testMutuallyExclusiveScopesFail(): void
     {
         $output = new FakeOutput();
