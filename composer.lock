@@ -614,16 +614,16 @@
         },
         {
             "name": "phpnomad/symfony-console-integration",
-            "version": "1.0.3",
+            "version": "1.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpnomad/symfony-console-integration.git",
-                "reference": "4d5644314b30d15806be4b45064d5a532c4e4768"
+                "reference": "6bc5c98c9effde83ceadf0d244d728cb9ab0ef09"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpnomad/symfony-console-integration/zipball/4d5644314b30d15806be4b45064d5a532c4e4768",
-                "reference": "4d5644314b30d15806be4b45064d5a532c4e4768",
+                "url": "https://api.github.com/repos/phpnomad/symfony-console-integration/zipball/6bc5c98c9effde83ceadf0d244d728cb9ab0ef09",
+                "reference": "6bc5c98c9effde83ceadf0d244d728cb9ab0ef09",
                 "shasum": ""
             },
             "require": {
@@ -652,9 +652,9 @@
             "homepage": "https://github.com/phoenix/core",
             "support": {
                 "issues": "https://github.com/phpnomad/symfony-console-integration/issues",
-                "source": "https://github.com/phpnomad/symfony-console-integration/tree/1.0.3"
+                "source": "https://github.com/phpnomad/symfony-console-integration/tree/1.0.4"
             },
-            "time": "2026-03-31T15:31:04+00:00"
+            "time": "2026-04-13T20:06:42+00:00"
         },
         {
             "name": "phpnomad/update",

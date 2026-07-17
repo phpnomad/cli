@@ -18,6 +18,7 @@ use PHPNomad\Cli\Indexer\Adapters\ResolvedTableAdapter;
 use PHPNomad\Cli\Indexer\Adapters\ResolvedTaskHandlerAdapter;
 use PHPNomad\Cli\Indexer\Models\ProjectIndex;
 use PHPNomad\Console\Interfaces\OutputStrategy;
+use Symfony\Component\Finder\Finder;
 
 class ProjectIndexer
 {
@@ -407,6 +408,16 @@ class ProjectIndexer
 
         $meta = json_decode($metaContents, true);
 
+        if (!is_array($meta)) {
+            $meta = [];
+        }
+
+        $stalenessWarning = $this->getStalenessWarning($path, (string) ($meta['indexedAt'] ?? ''));
+
+        if ($stalenessWarning !== null) {
+            $this->emitStalenessWarning($stalenessWarning);
+        }
+
         $classes = $this->readJsonlFile($dir . '/classes.jsonl', fn($d) => $this->classAdapter->fromArray($d), 'fqcn');
         $initializers = $this->readJsonlFile($dir . '/initializers.jsonl', fn($d) => $this->initializerAdapter->fromArray($d), 'fqcn');
         $applications = $this->readJsonlFile($dir . '/applications.jsonl', fn($d) => $this->applicationAdapter->fromArray($d));
@@ -442,6 +453,53 @@ class ProjectIndexer
             $dependentsMap,
             $orphans
         );
+    }
+
+    /**
+     * Determine whether an index written at $indexedAt is stale relative to the PHP
+     * source files under $path. Returns a warning message when any source file was
+     * modified after the index was written, or null when the index is current or
+     * freshness cannot be determined.
+     */
+    public function getStalenessWarning(string $path, string $indexedAt): ?string
+    {
+        if ($indexedAt === '') {
+            return null;
+        }
+
+        $indexedTimestamp = strtotime($indexedAt);
+
+        if ($indexedTimestamp === false) {
+            return null;
+        }
+
+        $path = rtrim($path, '/');
+
+        if (!is_dir($path)) {
+            return null;
+        }
+
+        $finder = new Finder();
+        $finder->files()
+            ->name('*.php')
+            ->in($path)
+            ->exclude(['vendor', 'tests', 'node_modules'])
+            ->date('after @' . $indexedTimestamp);
+
+        if ($finder->hasResults()) {
+            return 'phpnomad: index is stale (source changed since ' . $indexedAt . ') — run `phpnomad index` or pass --fresh';
+        }
+
+        return null;
+    }
+
+    /**
+     * Write a staleness warning to stderr. Kept separate so the warning channel never
+     * pollutes stdout (which agents parse) and so tests can capture it.
+     */
+    protected function emitStalenessWarning(string $message): void
+    {
+        fwrite(STDERR, $message . PHP_EOL);
     }
 
     /**

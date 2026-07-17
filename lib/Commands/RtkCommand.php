@@ -2,9 +2,11 @@
 
 namespace PHPNomad\Cli\Commands;
 
+use PHPNomad\Cli\Support\ClaudeHookInstaller;
 use PHPNomad\Console\Interfaces\Command;
 use PHPNomad\Console\Interfaces\Input;
 use PHPNomad\Console\Interfaces\OutputStrategy;
+use RuntimeException;
 
 class RtkCommand implements Command
 {
@@ -46,9 +48,19 @@ class RtkCommand implements Command
             return 1;
         }
 
+        $projectPath = null;
+
+        if ($project) {
+            $projectPath = $this->resolveProjectPath((string) $input->getParam('path', './'));
+
+            if ($projectPath === null) {
+                return 1;
+            }
+        }
+
         $target = $global
             ? $this->getGlobalFilterPath()
-            : $this->getProjectFilterPath((string) $input->getParam('path', './'));
+            : $projectPath . '/.rtk/filters.toml';
 
         if ($target === null) {
             return 1;
@@ -79,11 +91,46 @@ class RtkCommand implements Command
         $scope = $global ? 'global' : 'project';
         $this->output->success("rtk: installed $scope filters=$target");
 
-        if ($project) {
+        if ($project && $projectPath !== null) {
+            if (!$this->installClaudeHook($projectPath)) {
+                return 1;
+            }
+
             $this->output->writeln('rtk: run `rtk trust` from the project root before project-local filters apply');
         }
 
+        if ($global) {
+            $this->output->writeln('rtk: the Claude Code hook is project-scoped — run `phpnomad rtk --project` inside a project to install it');
+        }
+
         return 0;
+    }
+
+    protected function installClaudeHook(string $projectPath): bool
+    {
+        $installer = new ClaudeHookInstaller($this->getBundledHookScriptPath());
+
+        try {
+            $result = $installer->install($projectPath);
+        } catch (RuntimeException $e) {
+            $this->output->error($e->getMessage());
+            return false;
+        }
+
+        $this->output->success('rtk: installed Claude Code hook=' . $result['scriptPath']);
+
+        if ($result['settingsChanged']) {
+            $this->output->success('rtk: registered PreToolUse hook in ' . $result['settingsPath']);
+        } else {
+            $this->output->writeln('rtk: PreToolUse hook already registered in ' . $result['settingsPath']);
+        }
+
+        return true;
+    }
+
+    protected function getBundledHookScriptPath(): string
+    {
+        return dirname(__DIR__, 2) . '/resources/claude/phpnomad-rtk.php';
     }
 
     protected function getBundledFilterPath(): string
@@ -91,7 +138,7 @@ class RtkCommand implements Command
         return dirname(__DIR__, 2) . '/resources/rtk/filters.toml';
     }
 
-    protected function getProjectFilterPath(string $rawPath): ?string
+    protected function resolveProjectPath(string $rawPath): ?string
     {
         $path = realpath($rawPath);
 
@@ -100,7 +147,7 @@ class RtkCommand implements Command
             return null;
         }
 
-        return rtrim($path, '/') . '/.rtk/filters.toml';
+        return rtrim($path, '/');
     }
 
     protected function getGlobalFilterPath(): ?string
