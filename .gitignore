@@ -3,3 +3,10 @@
 .idea/
 .vscode/
 *.log
+
+# Generated PHPNomad index files — rebuild with `phpnomad index --path=.`
+# Project-local recipes, templates, and config stay tracked.
+/.phpnomad/*
+!/.phpnomad/recipes/
+!/.phpnomad/templates/
+!/.phpnomad/config.json
