@@ -10,3 +10,6 @@
 !/.phpnomad/recipes/
 !/.phpnomad/templates/
 !/.phpnomad/config.json
+
+# Agent-generated KB context — rebuilt per session.
+/.claude/kb-context.md

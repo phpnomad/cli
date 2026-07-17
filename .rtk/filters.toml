@@ -1,5 +1,6 @@
 schema_version = 1
 
+# BEGIN PHPNomad CLI RTK filters
 [filters.phpnomad-index]
 description = "Compact PHPNomad index output while preserving summary counts and warnings"
 match_command = "^(?:php\\s+)?(?:\\S*/)?phpnomad\\s+index\\b"
@@ -87,3 +88,4 @@ expected = """
 rtk: installed project filters=/tmp/project/.rtk/filters.toml
 rtk: run `rtk trust` from the project root before project-local filters apply
 """
+# END PHPNomad CLI RTK filters
