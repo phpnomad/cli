@@ -45,11 +45,12 @@ class MakeCommand implements Command
             return 1;
         }
 
-        // Walk upward to find the project root (directory containing composer.json)
+        // Walk upward to find the project root (directory containing composer.json,
+        // package.json, or a .phpnomad/ directory — recipes are not PHP-only).
         $projectRoot = $this->findProjectRoot($path);
 
         if ($projectRoot === null) {
-            $this->output->error('Could not find composer.json in ' . $input->getParam('path') . ' or any parent directory.');
+            $this->output->error('Could not find composer.json, package.json, or .phpnomad/ in ' . $input->getParam('path') . ' or any parent directory.');
             return 1;
         }
 
@@ -68,7 +69,11 @@ class MakeCommand implements Command
         $current = $path;
 
         while (true) {
-            if (file_exists($current . '/composer.json')) {
+            if (
+                file_exists($current . '/composer.json')
+                || file_exists($current . '/package.json')
+                || is_dir($current . '/.phpnomad')
+            ) {
                 return $current;
             }
 
