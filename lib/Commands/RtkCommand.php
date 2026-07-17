@@ -2,9 +2,11 @@
 
 namespace PHPNomad\Cli\Commands;
 
+use PHPNomad\Cli\Support\ClaudeHookInstaller;
 use PHPNomad\Console\Interfaces\Command;
 use PHPNomad\Console\Interfaces\Input;
 use PHPNomad\Console\Interfaces\OutputStrategy;
+use RuntimeException;
 
 class RtkCommand implements Command
 {
@@ -46,9 +48,19 @@ class RtkCommand implements Command
             return 1;
         }
 
+        $projectPath = null;
+
+        if ($project) {
+            $projectPath = $this->resolveProjectPath((string) $input->getParam('path', './'));
+
+            if ($projectPath === null) {
+                return 1;
+            }
+        }
+
         $target = $global
             ? $this->getGlobalFilterPath()
-            : $this->getProjectFilterPath((string) $input->getParam('path', './'));
+            : $projectPath . '/.rtk/filters.toml';
 
         if ($target === null) {
             return 1;
@@ -79,11 +91,46 @@ class RtkCommand implements Command
         $scope = $global ? 'global' : 'project';
         $this->output->success("rtk: installed $scope filters=$target");
 
-        if ($project) {
+        if ($project && $projectPath !== null) {
+            if (!$this->installClaudeHook($projectPath)) {
+                return 1;
+            }
+
             $this->output->writeln('rtk: run `rtk trust` from the project root before project-local filters apply');
         }
 
+        if ($global) {
+            $this->output->writeln('rtk: the Claude Code hook is project-scoped — run `phpnomad rtk --project` inside a project to install it');
+        }
+
         return 0;
+    }
+
+    protected function installClaudeHook(string $projectPath): bool
+    {
+        $installer = new ClaudeHookInstaller($this->getBundledHookScriptPath());
+
+        try {
+            $result = $installer->install($projectPath);
+        } catch (RuntimeException $e) {
+            $this->output->error($e->getMessage());
+            return false;
+        }
+
+        $this->output->success('rtk: installed Claude Code hook=' . $result['scriptPath']);
+
+        if ($result['settingsChanged']) {
+            $this->output->success('rtk: registered PreToolUse hook in ' . $result['settingsPath']);
+        } else {
+            $this->output->writeln('rtk: PreToolUse hook already registered in ' . $result['settingsPath']);
+        }
+
+        return true;
+    }
+
+    protected function getBundledHookScriptPath(): string
+    {
+        return dirname(__DIR__, 2) . '/resources/claude/phpnomad-rtk.php';
     }
 
     protected function getBundledFilterPath(): string
@@ -91,7 +138,7 @@ class RtkCommand implements Command
         return dirname(__DIR__, 2) . '/resources/rtk/filters.toml';
     }
 
-    protected function getProjectFilterPath(string $rawPath): ?string
+    protected function resolveProjectPath(string $rawPath): ?string
     {
         $path = realpath($rawPath);
 
@@ -100,7 +147,7 @@ class RtkCommand implements Command
             return null;
         }
 
-        return rtrim($path, '/') . '/.rtk/filters.toml';
+        return rtrim($path, '/');
     }
 
     protected function getGlobalFilterPath(): ?string
@@ -132,6 +179,8 @@ class RtkCommand implements Command
             $existing
         ) ?? $existing;
 
+        $cleaned = $this->stripCollidingSections($cleaned, $this->extractSectionNames($body));
+
         $cleaned = trim($cleaned);
 
         if ($cleaned === '') {
@@ -143,5 +192,59 @@ class RtkCommand implements Command
         }
 
         return rtrim($cleaned) . "\n\n" . $block . "\n";
+    }
+
+    /**
+     * Table names (`[filters.<name>]` / `[[tests.<name>]]`) defined by the
+     * bundled filter block.
+     *
+     * @return string[]
+     */
+    protected function extractSectionNames(string $toml): array
+    {
+        preg_match_all('/^\s*\[\[?\s*(?:filters|tests)\.([A-Za-z0-9_-]+)/m', $toml, $matches);
+
+        return array_values(array_unique($matches[1]));
+    }
+
+    /**
+     * Remove existing `[filters.*]` / `[[tests.*]]` sections whose names
+     * collide with the bundled block. Repos that committed the bundled
+     * filters by hand (without the marker block) would otherwise end up with
+     * duplicate TOML tables — a parse error that disables every filter.
+     * Tracks triple-quoted strings so headers inside multiline values are
+     * ignored.
+     *
+     * @param string[] $names
+     */
+    protected function stripCollidingSections(string $existing, array $names): string
+    {
+        if ($names === []) {
+            return $existing;
+        }
+
+        $kept = [];
+        $inMultiline = false;
+        $skipping = false;
+
+        foreach (preg_split('/\R/', $existing) ?: [] as $line) {
+            if (!$inMultiline && preg_match('/^\s*\[/', $line)) {
+                $isColliding = preg_match('/^\s*\[\[?\s*(?:filters|tests)\.([A-Za-z0-9_-]+)/', $line, $match)
+                    && in_array($match[1], $names, true);
+                $skipping = $isColliding;
+            }
+
+            if (!$skipping) {
+                $kept[] = $line;
+            }
+
+            $quoteCount = substr_count($line, '"""') + substr_count($line, "'''");
+
+            if ($quoteCount % 2 === 1) {
+                $inMultiline = !$inMultiline;
+            }
+        }
+
+        return implode("\n", $kept);
     }
 }
