@@ -45,6 +45,39 @@ class MakeCommandTest extends TestCase
         $this->assertSame($projectRoot, $result);
     }
 
+    public function testFindProjectRootAcceptsPackageJsonProjects(): void
+    {
+        $command = $this->createCommand();
+
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
+        mkdir($tmpDir . '/sub', 0755, true);
+        file_put_contents($tmpDir . '/package.json', '{"name":"probe"}');
+
+        try {
+            $this->assertSame($tmpDir, $this->callFindProjectRoot($command, $tmpDir));
+            $this->assertSame($tmpDir, $this->callFindProjectRoot($command, $tmpDir . '/sub'));
+        } finally {
+            unlink($tmpDir . '/package.json');
+            rmdir($tmpDir . '/sub');
+            rmdir($tmpDir);
+        }
+    }
+
+    public function testFindProjectRootAcceptsPhpnomadDirProjects(): void
+    {
+        $command = $this->createCommand();
+
+        $tmpDir = sys_get_temp_dir() . '/phpnomad-test-' . uniqid();
+        mkdir($tmpDir . '/.phpnomad', 0755, true);
+
+        try {
+            $this->assertSame($tmpDir, $this->callFindProjectRoot($command, $tmpDir));
+        } finally {
+            rmdir($tmpDir . '/.phpnomad');
+            rmdir($tmpDir);
+        }
+    }
+
     public function testFindProjectRootReturnsNullWhenNotFound(): void
     {
         $command = $this->createCommand();

@@ -97,6 +97,14 @@ class RecipeEngine
         foreach ($recipe->files as $i => $file) {
             $resolvedPath = $this->resolveVarsInString($file->path, $vars);
 
+            // Only PHP outputs need a PSR-4 namespace. Plain-text outputs
+            // (TypeScript, Dockerfiles, YAML, …) generate without one, so a
+            // recipe kit can scaffold non-PHP projects.
+            if (!str_ends_with(strtolower($resolvedPath), '.php')) {
+                $fileNamespaces[$i] = '';
+                continue;
+            }
+
             try {
                 $fileNamespaces[$i] = $this->namespaceResolver->resolve($resolvedPath, $projectPath);
             } catch (\Throwable $e) {
